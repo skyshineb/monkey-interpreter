@@ -1,13 +1,8 @@
 package com.coolstuff.token;
 
-public class Token {
+/**
+ * @param type class values
+ */
+public record Token(TokenType type, String token) {
 
-    // class values
-    final String type;
-    final String token;
-
-    public Token(String type, String token) {
-        this.type = type;
-        this.token = token;
-    }
 }

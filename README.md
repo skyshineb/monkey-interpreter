@@ -26,3 +26,5 @@ The base version of interpreter is WIP.
 
 #### To-Do:
 - Full unicode support in syntax
+- Make some benchmarking
+- Compiling to JVM bytecode
