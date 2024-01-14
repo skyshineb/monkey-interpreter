@@ -29,10 +29,26 @@ public class Lexer {
         skipWhitespaces();
 
         switch (ch) {
-            case '=' -> tok = TokenType.ASSIGN.token();
+            case '=' -> {
+                if (peekChar() == '=') {
+                    readChar();
+                    tok = TokenType.EQ.token();
+                } else {
+                    tok = TokenType.ASSIGN.token();
+                }
+
+
+            }
             case '+' -> tok = TokenType.PLUS.token();
             case '-' -> tok = TokenType.MINUS.token();
-            case '!' -> tok = TokenType.BANG.token();
+            case '!' -> {
+                if (peekChar() == '=') {
+                    readChar();
+                    tok = TokenType.NOT_EQ.token();
+                } else {
+                    tok = TokenType.BANG.token();
+                }
+            }
             case '/' -> tok = TokenType.SLASH.token();
             case '*' -> tok = TokenType.ASTERISK.token();
             case '<' -> tok = TokenType.LT.token();
@@ -71,6 +87,14 @@ public class Lexer {
     private void skipWhitespaces() {
         while (Character.isWhitespace(ch)) {
             readChar();
+        }
+    }
+
+    private char peekChar() {
+        if (readPosition >= input.length()) {
+            return 0;
+        } else {
+            return input.charAt(readPosition);
         }
     }
 

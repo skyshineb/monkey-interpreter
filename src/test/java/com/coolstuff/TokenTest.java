@@ -50,6 +50,9 @@ public class TokenTest {
                 } else {
                 return false;
                 }
+                
+                10 == 10;
+                10 != 9;
                 """;
         Lexer lexer = new Lexer(input);
         Token[] expected = {
@@ -118,6 +121,14 @@ public class TokenTest {
                 new Token(TokenType.FALSE, "false"),
                 new Token(TokenType.SEMICOLON, ";"),
                 new Token(TokenType.RBRACE, "}"),
+                new Token(TokenType.INT, "10"),
+                new Token(TokenType.EQ, "=="),
+                new Token(TokenType.INT, "10"),
+                new Token(TokenType.SEMICOLON, ";"),
+                new Token(TokenType.INT, "10"),
+                new Token(TokenType.NOT_EQ, "!="),
+                new Token(TokenType.INT, "9"),
+                new Token(TokenType.SEMICOLON, ";"),
                 new Token(TokenType.EOF, "eof"),
         };
         Assertions.assertDoesNotThrow(() -> {
