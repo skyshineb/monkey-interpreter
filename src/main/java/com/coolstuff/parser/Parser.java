@@ -1,16 +1,17 @@
 package com.coolstuff.parser;
 
-import com.coolstuff.ast.Nodes.Identifier;
+import com.coolstuff.ast.*;
+import com.coolstuff.ast.Nodes.ExpressionStatement;
 import com.coolstuff.ast.Nodes.LetStatement;
 import com.coolstuff.ast.Nodes.ReturnStatement;
-import com.coolstuff.ast.Program;
-import com.coolstuff.ast.Statement;
 import com.coolstuff.lexer.Lexer;
 import com.coolstuff.token.Token;
 import com.coolstuff.token.TokenType;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import static com.coolstuff.parser.Precedence.LOWEST;
 
 public class Parser {
     final Lexer lexer;
@@ -55,9 +56,30 @@ public class Parser {
                 return parseReturnStatement();
             }
             default -> {
-                return null;
+                return parseExpressionStatement();
             }
         }
+    }
+
+    private ExpressionStatement parseExpressionStatement() {
+        var token = curToken;
+        var expression = parseExpression(LOWEST);
+
+        if (peekTokenIs(TokenType.SEMICOLON)) {
+            nextToken();
+        }
+
+        return new ExpressionStatement(token, expression);
+    }
+
+    private Expression parseExpression(Precedence precedence) {
+        var prefix = prefixParseFn();
+        if (prefix == null) {
+            return null;
+        }
+        var leftExpr = prefix.get();
+
+        return leftExpr;
     }
 
     private ReturnStatement parseReturnStatement() {
@@ -80,7 +102,7 @@ public class Parser {
             return null;
         }
 
-        var name = new Identifier(curToken, curToken.token());
+        var name = new IdentifierExpression(curToken, curToken.token());
 
         if (!expectPeek(TokenType.ASSIGN)) {
             return null;
@@ -119,5 +141,27 @@ public class Parser {
 
     public List<String> getErrors() {
         return errors;
+    }
+
+    public ParserSupplier<Expression> prefixParseFn() {
+        return switch (curToken.type()) {
+            case IDENT -> () -> new IdentifierExpression(curToken, curToken.token());
+            case INT -> this::parseIntegerLiteral;
+            default -> null;
+        };
+    }
+
+    private Expression parseIntegerLiteral() {
+        try {
+            long val = Long.parseLong(curToken.token());
+            return new IntegerLiteralExpression(curToken, val);
+        } catch (NumberFormatException e) {
+            errors.add(String.format("Could not parse %s as integer", curToken.token()));
+            return null;
+        }
+    }
+
+    public ParserFunction<Expression, Expression> infixParseFn(Expression left) {
+        return null;
     }
 }

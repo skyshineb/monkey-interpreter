@@ -12,6 +12,18 @@ public record ReturnStatement(Token token, Expression returnValue) implements St
     }
 
     @Override
+    public String string() {
+        var builder = new StringBuilder();
+        builder.append(tokenLiteral()).append(' ');
+        if (returnValue != null) {
+            builder.append(returnValue.string());
+        }
+        builder.append(';');
+
+        return builder.toString();
+    }
+
+    @Override
     public void statementNode() {
 
     }

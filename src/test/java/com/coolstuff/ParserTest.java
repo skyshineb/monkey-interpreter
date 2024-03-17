@@ -1,5 +1,8 @@
 package com.coolstuff;
 
+import com.coolstuff.ast.IntegerLiteralExpression;
+import com.coolstuff.ast.Nodes.ExpressionStatement;
+import com.coolstuff.ast.IdentifierExpression;
 import com.coolstuff.ast.Nodes.LetStatement;
 import com.coolstuff.ast.Nodes.ReturnStatement;
 import com.coolstuff.ast.Program;
@@ -88,6 +91,50 @@ public class ParserTest {
             Assertions.assertInstanceOf(ReturnStatement.class, stmt);
             Assertions.assertEquals("return", stmt.tokenLiteral());
         }
+    }
+
+    @Test
+    public void testIdentifierExpression() {
+        var input = "foobar;";
+
+        var l = new Lexer(input);
+        var p = new Parser(l);
+        var program = p.parseProgram();
+        checkParserErrors(p);
+
+        if (program.statements().length != 1) {
+            Assertions.fail("program.statements[] should contain 1 statement");
+        }
+        Assertions.assertInstanceOf(ExpressionStatement.class, program.statements()[0]);
+
+        var stmt = (ExpressionStatement) program.statements()[0];
+        Assertions.assertInstanceOf(IdentifierExpression.class, stmt.expression());
+
+        var ident = (IdentifierExpression) stmt.expression();
+        Assertions.assertEquals("foobar", ident.value());
+        Assertions.assertEquals("foobar", ident.tokenLiteral());
+    }
+
+    @Test
+    public void testIntegerLiteralExpression() {
+        var input = "5;";
+
+        var l = new Lexer(input);
+        var p = new Parser(l);
+        var program = p.parseProgram();
+        checkParserErrors(p);
+
+        if (program.statements().length != 1) {
+            Assertions.fail("program.statements[] should contain 1 statement");
+        }
+        Assertions.assertInstanceOf(ExpressionStatement.class, program.statements()[0]);
+
+        var stmt = (ExpressionStatement) program.statements()[0];
+        Assertions.assertInstanceOf(IntegerLiteralExpression.class, stmt.expression());
+
+        var intLiter = (IntegerLiteralExpression) stmt.expression();
+        Assertions.assertEquals(5, intLiter.value());
+        Assertions.assertEquals("5", intLiter.tokenLiteral());
     }
 
     private void checkParserErrors(Parser p) {
