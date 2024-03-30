@@ -1,5 +1,7 @@
 package com.coolstuff.parser;
 
+import com.coolstuff.token.TokenType;
+
 public enum Precedence {
     LOWEST,
     EQUALS,         // == or !=
@@ -8,4 +10,14 @@ public enum Precedence {
     PRODUCT,        // * or /
     PREFIX,         // -X or !X
     CALL;           // myFunction(X)
+
+    public static Precedence precedenceForToken(TokenType type) {
+        return switch (type) {
+            case EQ, NOT_EQ -> Precedence.EQUALS;
+            case LT, GT -> Precedence.LESS_GREATER;
+            case PLUS, MINUS -> Precedence.SUM;
+            case ASTERISK, SLASH -> Precedence.PRODUCT;
+            default -> Precedence.LOWEST;
+        };
+    }
 }

@@ -1,7 +1,5 @@
 package com.coolstuff.ast;
 
-import java.util.Arrays;
-
 public record Program(Statement[] statements) implements Node {
 
     @Override
@@ -17,7 +15,7 @@ public record Program(Statement[] statements) implements Node {
     public String string() {
         StringBuilder builder = new StringBuilder();
         for (Statement s : statements) {
-            builder.append(s.string()).append('\n');
+            builder.append(s.string());
         }
         return builder.toString();
     }

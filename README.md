@@ -1,5 +1,5 @@
 # Monkey programming language in Java
-_Based on interpreterbook.com_
+_Based on [interpreterbook.com](https://interpreterbook.com)_
 
 The base version of interpreter is WIP.
 
@@ -19,7 +19,7 @@ The base version of interpreter is WIP.
 | Feature    | Status             | When       |  
 |------------|--------------------|------------|  
 | Lexing     | done ⭐             | 14.01.2024 |
-| Parsing    | in progress(p. 58) |            |
+| Parsing    | in progress(p. 78) |            |
 | Evaluation |                    |            |
 | Extension  |                    |            |
 

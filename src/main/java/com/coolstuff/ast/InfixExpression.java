@@ -1,6 +1,8 @@
 package com.coolstuff.ast;
 
-public record InfixExpression() implements Expression{
+import com.coolstuff.token.Token;
+
+public record InfixExpression(Token token, Expression left, String operator, Expression right) implements Expression{
     @Override
     public void expressionNode() {
 
@@ -8,11 +10,18 @@ public record InfixExpression() implements Expression{
 
     @Override
     public String tokenLiteral() {
-        return null;
+        return token.token();
     }
 
     @Override
     public String string() {
-        return null;
+        StringBuilder builder = new StringBuilder();
+        builder.append('(');
+        builder.append(left.string());
+        builder.append(' ').append(operator).append(' ');
+        builder.append(right.string());
+        builder.append(')');
+
+        return builder.toString();
     }
 }

@@ -9,6 +9,7 @@ import com.coolstuff.parser.Parser;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -153,7 +154,7 @@ public class ParserTest {
             Assertions.assertInstanceOf(PrefixExpression.class, stmt.expression());
 
             var prefixExpr = (PrefixExpression) stmt.expression();
-            testIntegerLiteral(prefixExpr.right(), in.getValue());
+            testLiteralExpression(prefixExpr.right(), in.getValue());
         }
     }
 
@@ -163,6 +164,99 @@ public class ParserTest {
 
         Assertions.assertEquals(value, integ.value());
         Assertions.assertEquals(value.toString(), integ.tokenLiteral());
+    }
+
+    private void testIdentifier(Expression expr, String value) {
+        Assertions.assertInstanceOf(IdentifierExpression.class, expr);
+        Assertions.assertEquals(value, ((IdentifierExpression)expr).value());
+        Assertions.assertEquals(value, expr.tokenLiteral());
+    }
+
+    private void testLiteralExpression(Expression expr, Object expected) {
+        switch (expected) {
+            case Integer i -> testIntegerLiteral(expr, i.longValue());
+            case Long i -> testIntegerLiteral(expr, i);
+            case String s -> testIdentifier(expr, s);
+            default ->  throw new AssertionError("Type of exp not handled. got=" + expected.getClass().getSimpleName());
+        }
+    }
+
+    private record InfixTestRecord(String expression, Object left, String operator, Object right){}
+
+    @Test
+    public void testParsingInfixExpressions() {
+        var input = List.of(
+                new InfixTestRecord("5 + 5;", 5L, "+", 5L),
+                new InfixTestRecord("5 - 5;", 5L, "-", 5L),
+                new InfixTestRecord("5 * 5;", 5L, "*", 5L),
+                new InfixTestRecord("5 / 5;", 5L, "/", 5L),
+                new InfixTestRecord("5 > 5;", 5L, ">", 5L),
+                new InfixTestRecord("5 < 5;", 5L, "<", 5L),
+                new InfixTestRecord("5 == 5;", 5L, "==", 5L),
+                new InfixTestRecord("5 != 5;", 5L, "!=", 5L)
+        );
+        for (var testCase : input) {
+            var l = new Lexer(testCase.expression);
+            var p = new Parser(l);
+            var program = p.parseProgram();
+            checkParserErrors(p);
+
+            if (program.statements().length != 1) {
+                Assertions.fail("program.statements[] should contain 1 statement");
+            }
+            Assertions.assertInstanceOf(ExpressionStatement.class, program.statements()[0]);
+
+            var stmt = (ExpressionStatement) program.statements()[0];
+            Assertions.assertInstanceOf(InfixExpression.class, stmt.expression());
+
+            var infixExpr = (InfixExpression) stmt.expression();
+
+            testLiteralExpression(infixExpr.left(),testCase.left);
+            testLiteralExpression(infixExpr.right(),testCase.right);
+
+            Assertions.assertEquals(testCase.operator, infixExpr.tokenLiteral());
+        }
+    }
+
+    private record OperatorPrecedenceTestCase(String input, String expected){}
+
+    @Test
+    public void testOperatorPrecedenceParsing() {
+        var testData = List.of(
+                new OperatorPrecedenceTestCase("-a * b",
+                        "((-a) * b)"),
+                new OperatorPrecedenceTestCase("!-a",
+                        "(!(-a))"),
+                new OperatorPrecedenceTestCase("a + b + c",
+                        "((a + b) + c)"),
+                new OperatorPrecedenceTestCase("a + b - c",
+                        "((a + b) - c)"),
+                new OperatorPrecedenceTestCase("a * b * c",
+                        "((a * b) * c)"),
+                new OperatorPrecedenceTestCase("a * b / c",
+                        "((a * b) / c)"),
+                new OperatorPrecedenceTestCase("a + b / c",
+                        "(a + (b / c))"),
+                new OperatorPrecedenceTestCase("a + b * c + d / e - f",
+                        "(((a + (b * c)) + (d / e)) - f)"),
+                new OperatorPrecedenceTestCase("3 + 4; -5 * 5",
+                        "(3 + 4)((-5) * 5)"),
+                new OperatorPrecedenceTestCase("5 > 4 == 3 < 4",
+                        "((5 > 4) == (3 < 4))"),
+                new OperatorPrecedenceTestCase("5 < 4 != 3 > 4",
+                        "((5 < 4) != (3 > 4))"),
+                new OperatorPrecedenceTestCase("3 + 4 * 5 == 3 * 1 + 4 * 5",
+                        "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))")
+        );
+
+        for (var testCase : testData) {
+            var l = new Lexer(testCase.input);
+            var p = new Parser(l);
+            var program = p.parseProgram();
+            checkParserErrors(p);
+
+            Assertions.assertEquals(testCase.expected, program.string());
+        }
     }
 
     private void checkParserErrors(Parser p) {

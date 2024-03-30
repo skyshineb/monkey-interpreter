@@ -81,6 +81,17 @@ public class Parser {
         }
         var leftExpr = prefix.get();
 
+        while (!peekTokenIs(TokenType.SEMICOLON) && precedence.ordinal() < peekPrecedence().ordinal()) {
+            var infix = infixParseFn(peekToken.type());
+            if (infix == null) {
+                return leftExpr;
+            }
+
+            nextToken();
+
+            leftExpr = infix.apply(leftExpr);
+        }
+
         return leftExpr;
     }
 
@@ -153,8 +164,7 @@ public class Parser {
         return switch (curToken.type()) {
             case IDENT -> () -> new IdentifierExpression(curToken, curToken.token());
             case INT -> this::parseIntegerLiteral;
-            case BANG -> this::parsePrefixExpression;
-            case MINUS -> this::parsePrefixExpression;
+            case BANG, MINUS -> this::parsePrefixExpression;
             default -> null;
         };
     }
@@ -179,7 +189,29 @@ public class Parser {
         }
     }
 
-    public ParserFunction<Expression, Expression> infixParseFn(Expression left) {
-        return null;
+    private ParserFunction<Expression, Expression> infixParseFn(TokenType type) {
+        return switch (type) {
+            case PLUS, MINUS, SLASH, ASTERISK, EQ, NOT_EQ, LT, GT -> this::parseInfixExpression;
+            default -> null;
+        };
+    }
+
+    private Expression parseInfixExpression(Expression left) {
+        Token token = curToken;
+        String operator = curToken.token();
+
+        var precedence = curPrecedence();
+        nextToken();
+        var right = parseExpression(precedence);
+
+        return new InfixExpression(token, left, operator, right);
+    }
+
+    private Precedence curPrecedence() {
+        return Precedence.precedenceForToken(curToken.type());
+    }
+
+    private Precedence peekPrecedence() {
+        return Precedence.precedenceForToken(peekToken.type());
     }
 }
