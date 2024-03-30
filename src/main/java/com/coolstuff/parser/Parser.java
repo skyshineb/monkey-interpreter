@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.coolstuff.parser.Precedence.LOWEST;
+import static com.coolstuff.parser.Precedence.PREFIX;
 
 public class Parser {
     final Lexer lexer;
@@ -75,11 +76,16 @@ public class Parser {
     private Expression parseExpression(Precedence precedence) {
         var prefix = prefixParseFn();
         if (prefix == null) {
+            noPrefixParseFnError(curToken.token());
             return null;
         }
         var leftExpr = prefix.get();
 
         return leftExpr;
+    }
+
+    private void noPrefixParseFnError(String tokenType) {
+        errors.add(String.format("no prefix parse function for %s found", tokenType));
     }
 
     private ReturnStatement parseReturnStatement() {
@@ -147,8 +153,20 @@ public class Parser {
         return switch (curToken.type()) {
             case IDENT -> () -> new IdentifierExpression(curToken, curToken.token());
             case INT -> this::parseIntegerLiteral;
+            case BANG -> this::parsePrefixExpression;
+            case MINUS -> this::parsePrefixExpression;
             default -> null;
         };
+    }
+
+    private Expression parsePrefixExpression() {
+        Token token = curToken;
+        String operator = curToken.token();
+
+        nextToken();
+
+        Expression right = parseExpression(PREFIX);
+        return new PrefixExpression(token, operator, right);
     }
 
     private Expression parseIntegerLiteral() {

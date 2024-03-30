@@ -1,17 +1,15 @@
 package com.coolstuff;
 
-import com.coolstuff.ast.IntegerLiteralExpression;
+import com.coolstuff.ast.*;
 import com.coolstuff.ast.Nodes.ExpressionStatement;
-import com.coolstuff.ast.IdentifierExpression;
 import com.coolstuff.ast.Nodes.LetStatement;
 import com.coolstuff.ast.Nodes.ReturnStatement;
-import com.coolstuff.ast.Program;
-import com.coolstuff.ast.Statement;
 import com.coolstuff.lexer.Lexer;
 import com.coolstuff.parser.Parser;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.Map;
 import java.util.Objects;
 
 public class ParserTest {
@@ -135,6 +133,36 @@ public class ParserTest {
         var intLiter = (IntegerLiteralExpression) stmt.expression();
         Assertions.assertEquals(5, intLiter.value());
         Assertions.assertEquals("5", intLiter.tokenLiteral());
+    }
+
+    @Test
+    public void testParsingPrefixExpressions() {
+        var input = Map.of("-5;", 5L, "!15;", 15L);
+        for (var in : input.entrySet()) {
+            var l = new Lexer(in.getKey());
+            var p = new Parser(l);
+            var program = p.parseProgram();
+            checkParserErrors(p);
+
+            if (program.statements().length != 1) {
+                Assertions.fail("program.statements[] should contain 1 statement");
+            }
+            Assertions.assertInstanceOf(ExpressionStatement.class, program.statements()[0]);
+
+            var stmt = (ExpressionStatement) program.statements()[0];
+            Assertions.assertInstanceOf(PrefixExpression.class, stmt.expression());
+
+            var prefixExpr = (PrefixExpression) stmt.expression();
+            testIntegerLiteral(prefixExpr.right(), in.getValue());
+        }
+    }
+
+    private void testIntegerLiteral(Expression exp, Long value) {
+        Assertions.assertInstanceOf(IntegerLiteralExpression.class, exp);
+        var integ = (IntegerLiteralExpression) exp;
+
+        Assertions.assertEquals(value, integ.value());
+        Assertions.assertEquals(value.toString(), integ.tokenLiteral());
     }
 
     private void checkParserErrors(Parser p) {
