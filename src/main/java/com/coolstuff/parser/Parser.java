@@ -165,8 +165,25 @@ public class Parser {
             case IDENT -> () -> new IdentifierExpression(curToken, curToken.token());
             case INT -> this::parseIntegerLiteral;
             case BANG, MINUS -> this::parsePrefixExpression;
+            case TRUE, FALSE ->  this::parseBooleanExpression;
+            case LPAREN -> this::parseGroupedExpression;
             default -> null;
         };
+    }
+
+    private Expression parseGroupedExpression() {
+        nextToken();
+        var expr = parseExpression(LOWEST);
+
+        if (!expectPeek(TokenType.RPAREN)) {
+            return null;
+        }
+
+        return expr;
+    }
+
+    private Expression parseBooleanExpression() {
+        return new BooleanExpression(curToken, curTokenIs(TokenType.TRUE));
     }
 
     private Expression parsePrefixExpression() {

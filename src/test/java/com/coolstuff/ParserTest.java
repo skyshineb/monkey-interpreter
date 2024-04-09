@@ -136,11 +136,45 @@ public class ParserTest {
         Assertions.assertEquals("5", intLiter.tokenLiteral());
     }
 
+    private record BooleanTestRecord(String input, boolean expected){}
+
+    @Test
+    public void testBooleanExpression() {
+        var input = List.of(
+                new BooleanTestRecord("true", true),
+                new BooleanTestRecord("false", false)
+        );
+        for (var testCase : input) {
+            var l  = new Lexer(testCase.input);
+            var p = new Parser(l);
+            var program = p.parseProgram();
+            checkParserErrors(p);
+
+            if (program.statements().length != 1) {
+                Assertions.fail("program.statements[] should contain 1 statement");
+            }
+            Assertions.assertInstanceOf(ExpressionStatement.class, program.statements()[0]);
+
+            var stmt = (ExpressionStatement) program.statements()[0];
+            Assertions.assertInstanceOf(BooleanExpression.class, stmt.expression());
+
+            var boolRes = (BooleanExpression) stmt.expression();
+            Assertions.assertEquals(testCase.expected, boolRes.value());
+        }
+    }
+
+    private record PrefixExpressionTestCase(String input, String operator, Object value) {}
+
     @Test
     public void testParsingPrefixExpressions() {
-        var input = Map.of("-5;", 5L, "!15;", 15L);
-        for (var in : input.entrySet()) {
-            var l = new Lexer(in.getKey());
+        var input = List.of(
+                new PrefixExpressionTestCase("-5;", "-", 5L),
+                new PrefixExpressionTestCase("!15;", "!",15L),
+                new PrefixExpressionTestCase("!true;", "!", true),
+                new PrefixExpressionTestCase("!false;", "!", false)
+        );
+        for (var testCase : input) {
+            var l = new Lexer(testCase.input);
             var p = new Parser(l);
             var program = p.parseProgram();
             checkParserErrors(p);
@@ -154,7 +188,8 @@ public class ParserTest {
             Assertions.assertInstanceOf(PrefixExpression.class, stmt.expression());
 
             var prefixExpr = (PrefixExpression) stmt.expression();
-            testLiteralExpression(prefixExpr.right(), in.getValue());
+            testLiteralExpression(prefixExpr.right(), testCase.value);
+            Assertions.assertEquals(testCase.operator, prefixExpr.operator());
         }
     }
 
@@ -172,11 +207,18 @@ public class ParserTest {
         Assertions.assertEquals(value, expr.tokenLiteral());
     }
 
+    private void testBooleanLiteral(Expression expr, boolean value) {
+        Assertions.assertInstanceOf(BooleanExpression.class, expr);
+        Assertions.assertEquals(value, ((BooleanExpression)expr).value());
+        Assertions.assertEquals(String.valueOf(value), expr.tokenLiteral());
+    }
+
     private void testLiteralExpression(Expression expr, Object expected) {
         switch (expected) {
             case Integer i -> testIntegerLiteral(expr, i.longValue());
             case Long i -> testIntegerLiteral(expr, i);
             case String s -> testIdentifier(expr, s);
+            case Boolean b -> testBooleanLiteral(expr, b);
             default ->  throw new AssertionError("Type of exp not handled. got=" + expected.getClass().getSimpleName());
         }
     }
@@ -193,7 +235,10 @@ public class ParserTest {
                 new InfixTestRecord("5 > 5;", 5L, ">", 5L),
                 new InfixTestRecord("5 < 5;", 5L, "<", 5L),
                 new InfixTestRecord("5 == 5;", 5L, "==", 5L),
-                new InfixTestRecord("5 != 5;", 5L, "!=", 5L)
+                new InfixTestRecord("5 != 5;", 5L, "!=", 5L),
+                new InfixTestRecord("true == true", true, "==", true),
+                new InfixTestRecord("true != false", true, "!=", false),
+                new InfixTestRecord("false == false", false, "==", false)
         );
         for (var testCase : input) {
             var l = new Lexer(testCase.expression);
@@ -246,7 +291,25 @@ public class ParserTest {
                 new OperatorPrecedenceTestCase("5 < 4 != 3 > 4",
                         "((5 < 4) != (3 > 4))"),
                 new OperatorPrecedenceTestCase("3 + 4 * 5 == 3 * 1 + 4 * 5",
-                        "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))")
+                        "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"),
+                new OperatorPrecedenceTestCase("true",
+                        "true"),
+                new OperatorPrecedenceTestCase("false",
+                        "false"),
+                new OperatorPrecedenceTestCase("3 > 5 == false",
+                        "((3 > 5) == false)"),
+                new OperatorPrecedenceTestCase("3 < 5 == true",
+                        "((3 < 5) == true)"),
+                new OperatorPrecedenceTestCase("1 + (2 + 3) + 4",
+                        "((1 + (2 + 3)) + 4)"),
+                new OperatorPrecedenceTestCase("(5 + 5) * 2",
+                        "((5 + 5) * 2)"),
+                new OperatorPrecedenceTestCase("2 / (5 + 5)",
+                        "(2 / (5 + 5))"),
+                new OperatorPrecedenceTestCase("-(5 + 5)",
+                        "(-(5 + 5))"),
+                new OperatorPrecedenceTestCase("!(true == true)",
+                        "(!(true == true))")
         );
 
         for (var testCase : testData) {
