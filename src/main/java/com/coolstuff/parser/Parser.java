@@ -1,6 +1,7 @@
 package com.coolstuff.parser;
 
 import com.coolstuff.ast.*;
+import com.coolstuff.ast.Nodes.BlockStatement;
 import com.coolstuff.ast.Nodes.ExpressionStatement;
 import com.coolstuff.ast.Nodes.LetStatement;
 import com.coolstuff.ast.Nodes.ReturnStatement;
@@ -167,8 +168,59 @@ public class Parser {
             case BANG, MINUS -> this::parsePrefixExpression;
             case TRUE, FALSE ->  this::parseBooleanExpression;
             case LPAREN -> this::parseGroupedExpression;
+            case IF -> this::parseIfExpression;
             default -> null;
         };
+    }
+
+    private Expression parseIfExpression() {
+        Token token = curToken;
+
+        if (!expectPeek(TokenType.LPAREN)) {
+            return null;
+        }
+
+        nextToken();
+
+        var condition = parseExpression(LOWEST);
+
+        if (!expectPeek(TokenType.RPAREN)) {
+            return null;
+        }
+
+        if (!expectPeek(TokenType.LBRACE)) {
+            return null;
+        }
+
+        var consequence = parseBlockStatement();
+
+        BlockStatement alternative = null;
+        if (peekTokenIs(TokenType.ELSE)) {
+            nextToken();
+            if (!expectPeek(TokenType.LBRACE)) {
+                return null;
+            }
+
+            alternative = parseBlockStatement();
+        }
+
+        return new IfExpression(token, condition, consequence, alternative);
+    }
+
+    private BlockStatement parseBlockStatement() {
+        Token token = curToken;
+        var statements = new ArrayList<Statement>();
+        nextToken();
+
+        while (!curTokenIs(TokenType.RBRACE) && !curTokenIs(TokenType.EOF)) {
+            var stmt = parseStatement();
+            if (stmt != null) {
+                statements.add(stmt);
+            }
+            nextToken();
+        }
+
+        return new BlockStatement(token, statements.toArray(Statement[]::new));
     }
 
     private Expression parseGroupedExpression() {

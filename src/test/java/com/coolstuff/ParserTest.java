@@ -24,11 +24,8 @@ public class ParserTest {
                 
                 """;
 
-        Lexer l = new Lexer(input);
-        Parser p = new Parser(l);
+        var program = buildProgram(input);
 
-        Program program = p.parseProgram();
-        checkParserErrors(p);
         if (program == null) {
             Assertions.fail("parseProgram returned null");
         }
@@ -76,11 +73,7 @@ public class ParserTest {
                 return 993322;
                 """;
 
-        Lexer l = new Lexer(input);
-        Parser p = new Parser(l);
-
-        Program program = p.parseProgram();
-        checkParserErrors(p);
+        var program = buildProgram(input);
 
         if (program.statements().length != 3) {
             Assertions.fail("program.statements[] should contain 3 statements");
@@ -96,14 +89,9 @@ public class ParserTest {
     public void testIdentifierExpression() {
         var input = "foobar;";
 
-        var l = new Lexer(input);
-        var p = new Parser(l);
-        var program = p.parseProgram();
-        checkParserErrors(p);
+        var program = buildProgram(input);
 
-        if (program.statements().length != 1) {
-            Assertions.fail("program.statements[] should contain 1 statement");
-        }
+        Assertions.assertEquals(1, program.statements().length);
         Assertions.assertInstanceOf(ExpressionStatement.class, program.statements()[0]);
 
         var stmt = (ExpressionStatement) program.statements()[0];
@@ -118,14 +106,9 @@ public class ParserTest {
     public void testIntegerLiteralExpression() {
         var input = "5;";
 
-        var l = new Lexer(input);
-        var p = new Parser(l);
-        var program = p.parseProgram();
-        checkParserErrors(p);
+        var program = buildProgram(input);
 
-        if (program.statements().length != 1) {
-            Assertions.fail("program.statements[] should contain 1 statement");
-        }
+        Assertions.assertEquals(1, program.statements().length);
         Assertions.assertInstanceOf(ExpressionStatement.class, program.statements()[0]);
 
         var stmt = (ExpressionStatement) program.statements()[0];
@@ -145,10 +128,7 @@ public class ParserTest {
                 new BooleanTestRecord("false", false)
         );
         for (var testCase : input) {
-            var l  = new Lexer(testCase.input);
-            var p = new Parser(l);
-            var program = p.parseProgram();
-            checkParserErrors(p);
+            var program = buildProgram(testCase.input);
 
             if (program.statements().length != 1) {
                 Assertions.fail("program.statements[] should contain 1 statement");
@@ -174,10 +154,7 @@ public class ParserTest {
                 new PrefixExpressionTestCase("!false;", "!", false)
         );
         for (var testCase : input) {
-            var l = new Lexer(testCase.input);
-            var p = new Parser(l);
-            var program = p.parseProgram();
-            checkParserErrors(p);
+            var program = buildProgram(testCase.input);
 
             if (program.statements().length != 1) {
                 Assertions.fail("program.statements[] should contain 1 statement");
@@ -241,25 +218,14 @@ public class ParserTest {
                 new InfixTestRecord("false == false", false, "==", false)
         );
         for (var testCase : input) {
-            var l = new Lexer(testCase.expression);
-            var p = new Parser(l);
-            var program = p.parseProgram();
-            checkParserErrors(p);
+            var program = buildProgram(testCase.expression);
 
             if (program.statements().length != 1) {
                 Assertions.fail("program.statements[] should contain 1 statement");
             }
-            Assertions.assertInstanceOf(ExpressionStatement.class, program.statements()[0]);
+            var stmt = Assertions.assertInstanceOf(ExpressionStatement.class, program.statements()[0]);
 
-            var stmt = (ExpressionStatement) program.statements()[0];
-            Assertions.assertInstanceOf(InfixExpression.class, stmt.expression());
-
-            var infixExpr = (InfixExpression) stmt.expression();
-
-            testLiteralExpression(infixExpr.left(),testCase.left);
-            testLiteralExpression(infixExpr.right(),testCase.right);
-
-            Assertions.assertEquals(testCase.operator, infixExpr.tokenLiteral());
+            testInfixExpression(stmt.expression(), testCase.left, testCase.operator, testCase.right);
         }
     }
 
@@ -313,12 +279,72 @@ public class ParserTest {
         );
 
         for (var testCase : testData) {
-            var l = new Lexer(testCase.input);
-            var p = new Parser(l);
-            var program = p.parseProgram();
-            checkParserErrors(p);
+            var program = buildProgram(testCase.input);
 
             Assertions.assertEquals(testCase.expected, program.string());
+        }
+    }
+
+    @Test
+    public void testIfExpression() {
+        var input = "if (x < y) {x}";
+        var program = buildProgram(input);
+
+        Assertions.assertEquals(1, program.statements().length);
+        var stmt = Assertions.assertInstanceOf(ExpressionStatement.class, program.statements()[0]);
+
+        var ifExpr = Assertions.assertInstanceOf(IfExpression.class, stmt.expression());
+
+        testInfixExpression(ifExpr.condition(), "x", "<", "y");
+
+        Assertions.assertEquals(1, ifExpr.consequence().statements().length);
+
+        var consequenceExpression = Assertions.assertInstanceOf(ExpressionStatement.class, ifExpr.consequence().statements()[0]);
+
+        testIdentifier(consequenceExpression.expression(), "x");
+
+        Assertions.assertNull(ifExpr.alternative());
+    }
+
+    @Test
+    public void testIfElseExpression() {
+        var input = "if (x < y) {x} else {y}";
+        var program = buildProgram(input);
+
+        Assertions.assertEquals(1, program.statements().length);
+        var stmt = Assertions.assertInstanceOf(ExpressionStatement.class, program.statements()[0]);
+
+        var ifExpr = Assertions.assertInstanceOf(IfExpression.class, stmt.expression());
+
+        testInfixExpression(ifExpr.condition(), "x", "<", "y");
+
+        Assertions.assertEquals(1, ifExpr.consequence().statements().length);
+
+        var consequence = Assertions.assertInstanceOf(ExpressionStatement.class, ifExpr.consequence().statements()[0]);
+
+        testIdentifier(consequence.expression(), "x");
+
+        Assertions.assertNotNull(ifExpr.alternative());
+
+        var alternative = Assertions.assertInstanceOf(ExpressionStatement.class, ifExpr.alternative().statements()[0]);
+
+        testIdentifier(alternative.expression(), "y");
+    }
+
+    private Program buildProgram(String input) {
+        var parser = new Parser(new Lexer(input));
+        var program = parser.parseProgram();
+        checkParserErrors(parser);
+        return program;
+    }
+
+    private void testInfixExpression(Expression expression, Object left, String operator, Object right) {
+        if (expression instanceof InfixExpression infixExpression) {
+            testLiteralExpression(infixExpression.left(), left);
+            Assertions.assertEquals(operator, infixExpression.operator());
+            testLiteralExpression(infixExpression.right(), right);
+        } else {
+            throw new AssertionError(expression.getClass().getSimpleName() + " is not instance of infixExpression");
         }
     }
 
