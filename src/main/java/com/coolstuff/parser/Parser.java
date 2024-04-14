@@ -169,8 +169,50 @@ public class Parser {
             case TRUE, FALSE ->  this::parseBooleanExpression;
             case LPAREN -> this::parseGroupedExpression;
             case IF -> this::parseIfExpression;
+            case FUNCTION -> this::parseFunctionLiteral;
             default -> null;
         };
+    }
+
+    private Expression parseFunctionLiteral() {
+        Token token = curToken;
+
+        if (!expectPeek(TokenType.LPAREN)) {
+            return null;
+        }
+
+        var parameters = parseFunctionParameters();
+
+        if (!expectPeek(TokenType.LBRACE)) {
+            return null;
+        }
+
+        var body = parseBlockStatement();
+
+        return new FunctionLiteral(token, parameters, body);
+    }
+
+    private IdentifierExpression[] parseFunctionParameters() {
+        ArrayList<IdentifierExpression> identifiers = new ArrayList<>();
+        if (peekTokenIs(TokenType.RPAREN)) {
+            nextToken();
+            return new IdentifierExpression[]{};
+        }
+
+        nextToken();
+        identifiers.add(new IdentifierExpression(curToken, curToken.token()));
+
+        while (peekTokenIs(TokenType.COMMA)) {
+            nextToken();
+            nextToken();
+            identifiers.add(new IdentifierExpression(curToken, curToken.token()));
+        }
+
+        if (!expectPeek(TokenType.RPAREN)) {
+            return null;
+        }
+
+        return identifiers.toArray(IdentifierExpression[]::new);
     }
 
     private Expression parseIfExpression() {

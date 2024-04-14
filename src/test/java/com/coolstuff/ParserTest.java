@@ -229,6 +229,49 @@ public class ParserTest {
         }
     }
 
+    @Test
+    public void testFunctionLiteralParsing() {
+        var input = "fn(x, y) {x+ y;}";
+        var program = buildProgram(input);
+
+        Assertions.assertEquals(1, program.statements().length);
+        var stmt = Assertions.assertInstanceOf(ExpressionStatement.class, program.statements()[0]);
+        var funEx = Assertions.assertInstanceOf(FunctionLiteral.class, stmt.expression());
+        Assertions.assertEquals(2, funEx.parameters().length);
+
+        testLiteralExpression(funEx.parameters()[0], "x");
+        testLiteralExpression(funEx.parameters()[1], "y");
+
+        Assertions.assertEquals(1, funEx.body().statements().length);
+
+        var bodyStmt = Assertions.assertInstanceOf(ExpressionStatement.class,funEx.body().statements()[0]);
+
+        testInfixExpression(bodyStmt.expression(), "x", "+", "y");
+    }
+
+    private record FunctionParameterTestCase(String input, String[] expectedParams){}
+
+    @Test
+    public void testFunctionParameterParsing() {
+        var testData = List.of(
+                new FunctionParameterTestCase("fn() {};", new String[]{}),
+                new FunctionParameterTestCase("fn(x) {};", new String[]{"x"}),
+                new FunctionParameterTestCase("fn(x, y, z) {};", new String[]{"x", "y", "z"})
+        );
+
+        for (var testCase : testData) {
+            var program = buildProgram(testCase.input);
+            var stmt = (ExpressionStatement) program.statements()[0];
+            var funExpr = (FunctionLiteral) stmt.expression();
+
+            Assertions.assertEquals(testCase.expectedParams.length, funExpr.parameters().length);
+
+            for (int i = 0; i < testCase.expectedParams.length; i++) {
+                testLiteralExpression(funExpr.parameters()[i], testCase.expectedParams[i]);
+            }
+        }
+    }
+
     private record OperatorPrecedenceTestCase(String input, String expected){}
 
     @Test
