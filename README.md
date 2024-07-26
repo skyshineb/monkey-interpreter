@@ -16,12 +16,12 @@ The base version of interpreter is WIP.
 - a hash data structure  
 
 #### Progress:
-| Feature    | Status               | When       |  
-|------------|----------------------|------------|  
-| Lexing     | done ⭐               | 14.01.2024 |
-| Parsing    | in progress(p. 92.5) |            |
-| Evaluation |                      |            |
-| Extension  |                      |            |
+| Feature    | Status              | When       |  
+|------------|---------------------|------------|  
+| Lexing     | done ⭐              | 14.01.2024 |
+| Parsing    | done ⭐              | 26.07.2024 |
+| Evaluation | in progress(p. 102) |            |
+| Extension  |                     |            |
 
 
 #### To-Do:
