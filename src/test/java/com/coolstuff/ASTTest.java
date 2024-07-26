@@ -27,6 +27,6 @@ public class ASTTest {
                 )
         });
 
-        Assertions.assertEquals("let myVar = anotherVar;\n", program.string());
+        Assertions.assertEquals("let myVar = anotherVar;", program.string());
     }
 }
