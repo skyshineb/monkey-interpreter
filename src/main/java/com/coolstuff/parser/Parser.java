@@ -105,12 +105,13 @@ public class Parser {
 
         nextToken();
 
-        // TODO: We're skipping an expression until we encounter a semicolon
-        while (!curTokenIs(TokenType.SEMICOLON)) {
+        var returnValue = parseExpression(LOWEST);
+
+        if (peekTokenIs(TokenType.SEMICOLON)) {
             nextToken();
         }
 
-        return new ReturnStatement(token, null);
+        return new ReturnStatement(token, returnValue);
     }
 
     private LetStatement parseLetStatement() {
@@ -126,12 +127,15 @@ public class Parser {
             return null;
         }
 
-        // TODO: We're skipping an expression until we encounter a semicolon
-        while (!curTokenIs(TokenType.SEMICOLON)) {
+        nextToken();
+
+        var value = parseExpression(LOWEST);
+
+        if (peekTokenIs(TokenType.SEMICOLON)) {
             nextToken();
         }
 
-        return new LetStatement(token, name, null);
+        return new LetStatement(token, name, value);
     }
 
     private boolean curTokenIs(TokenType t) {
@@ -303,8 +307,37 @@ public class Parser {
     private ParserFunction<Expression, Expression> infixParseFn(TokenType type) {
         return switch (type) {
             case PLUS, MINUS, SLASH, ASTERISK, EQ, NOT_EQ, LT, GT -> this::parseInfixExpression;
+            case LPAREN -> this::parseCallExpression;
             default -> null;
         };
+    }
+
+    private Expression parseCallExpression(Expression function) {
+        return new CallExpression(curToken, function, parseCallArguments());
+    }
+
+    private Expression[] parseCallArguments() {
+        var args = new ArrayList<Expression>();
+
+        if (peekTokenIs(TokenType.RPAREN)) {
+            nextToken();
+            return args.toArray(Expression[]::new);
+        }
+
+        nextToken();
+        args.add(parseExpression(LOWEST));
+
+        while (peekTokenIs(TokenType.COMMA)) {
+            nextToken();
+            nextToken();
+            args.add(parseExpression(LOWEST));
+        }
+
+        if (!expectPeek(TokenType.RPAREN)) {
+            return null;
+        }
+
+        return args.toArray(Expression[]::new);
     }
 
     private Expression parseInfixExpression(Expression left) {

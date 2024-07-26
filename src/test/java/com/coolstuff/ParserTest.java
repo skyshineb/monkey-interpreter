@@ -10,40 +10,32 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 public class ParserTest {
 
+    private record LetStatementTestCase(String input, String expectedIdentifier, Object expectedValue) {}
+
     @Test
     public void testLetStatements() {
-        final var input = """
-                let x = 5;
-                let y = 10;
-                let foobar  = 838383;
-                
-                """;
+        var tests = List.of(
+                new LetStatementTestCase("let x = 5;", "x", 5),
+                new LetStatementTestCase("let y = true;", "y", true),
+                new LetStatementTestCase("let foobar = y;", "foobar", "y")
+        );
 
-        var program = buildProgram(input);
+        for (var test : tests) {
+            var program = buildProgram(test.input);
+            Assertions.assertNotNull(program);
+            Assertions.assertEquals(1, program.statements().length);
 
-        if (program == null) {
-            Assertions.fail("parseProgram returned null");
+            var stmt = Assertions.assertInstanceOf(LetStatement.class, program.statements()[0]);
+
+            Assertions.assertTrue(testLetStatement(stmt, test.expectedIdentifier));
+
+            var value = stmt.value();
+            testLiteralExpression(value, test.expectedValue);
         }
-        if (program.statements().length != 3) {
-            Assertions.fail("program.statements[] should contain 3 statements");
-        }
-
-        String[] expectedIdentifiers = {
-                "x",
-                "y",
-                "foobar"
-        };
-
-        Assertions.assertDoesNotThrow(() -> {
-            for (int i = 0; i < expectedIdentifiers.length; i++) {
-                Assertions.assertTrue(testLetStatement(program.statements()[i], expectedIdentifiers[i]));
-            }
-        });
     }
 
     private boolean testLetStatement(Statement s, String name) {
@@ -65,23 +57,24 @@ public class ParserTest {
         return true;
     }
 
+    private record ReturnStatementTestCase(String input, Object returnValue) {}
+
     @Test
     public void testReturnStatements() {
-        final var input = """
-                return 5;
-                return 10;
-                return 993322;
-                """;
+        var tests = List.of(
+                new ReturnStatementTestCase("return 5;", 5L),
+                new ReturnStatementTestCase("return 10;", 10L),
+                new ReturnStatementTestCase("return 993322;", 993322L)
+        );
+        for (var test : tests) {
+            var program = buildProgram(test.input);
+            Assertions.assertEquals(1, program.statements().length);
 
-        var program = buildProgram(input);
-
-        if (program.statements().length != 3) {
-            Assertions.fail("program.statements[] should contain 3 statements");
-        }
-
-        for (Statement stmt : program.statements()) {
-            Assertions.assertInstanceOf(ReturnStatement.class, stmt);
+            var stmt = Assertions.assertInstanceOf(ReturnStatement.class, program.statements()[0]);
             Assertions.assertEquals("return", stmt.tokenLiteral());
+
+            var value = stmt.returnValue();
+            testLiteralExpression(value, test.returnValue);
         }
     }
 
@@ -318,7 +311,13 @@ public class ParserTest {
                 new OperatorPrecedenceTestCase("-(5 + 5)",
                         "(-(5 + 5))"),
                 new OperatorPrecedenceTestCase("!(true == true)",
-                        "(!(true == true))")
+                        "(!(true == true))"),
+                new OperatorPrecedenceTestCase("a + add(b * c) + d",
+                        "((a + add((b * c))) + d)"),
+                new OperatorPrecedenceTestCase("add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))",
+                        "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))"),
+                new OperatorPrecedenceTestCase("add(a + b + c * d / f + g)",
+                        "add((((a + b) + ((c * d) / f)) + g))")
         );
 
         for (var testCase : testData) {
@@ -372,6 +371,48 @@ public class ParserTest {
         var alternative = Assertions.assertInstanceOf(ExpressionStatement.class, ifExpr.alternative().statements()[0]);
 
         testIdentifier(alternative.expression(), "y");
+    }
+
+    @Test
+    public void testCallExpression() {
+        var input = "add(1, 2 * 3, 4 + 5);";
+        var program = buildProgram(input);
+
+        Assertions.assertEquals(1, program.statements().length);
+        var stmt = Assertions.assertInstanceOf(ExpressionStatement.class, program.statements()[0]);
+        var callExpr = Assertions.assertInstanceOf(CallExpression.class, stmt.expression());
+
+        testIdentifier(callExpr.function(), "add");
+        Assertions.assertEquals(3, callExpr.arguments().length);
+
+        testLiteralExpression(callExpr.arguments()[0], 1);
+        testInfixExpression(callExpr.arguments()[1], 2L, "*", 3L);
+        testInfixExpression(callExpr.arguments()[2], 4L, "+", 5L);
+    }
+
+    private record CallParameterTestCase(String input, List<String> expectedArguments) {
+    }
+
+    @Test
+    public void testCallParameterParsing() {
+        var tests = List.of(
+                new CallParameterTestCase("func()", List.of()),
+                new CallParameterTestCase("func(3 - 1)", List.of("(3 - 1)")),
+                new CallParameterTestCase("func(1, 2 * 3 + 1, 98)", List.of("1", "((2 * 3) + 1)", "98"))
+        );
+
+        for (var test : tests) {
+            var program = buildProgram(test.input);
+            Assertions.assertEquals(1, program.statements().length);
+
+            var call = (CallExpression) ((ExpressionStatement) program.statements()[0]).expression();
+
+            Assertions.assertEquals(test.expectedArguments.size(), call.arguments().length);
+
+            for (int i = 0; i < test.expectedArguments.size(); i++) {
+                Assertions.assertEquals(test.expectedArguments.get(i), call.arguments()[i].string());
+            }
+        }
     }
 
     private Program buildProgram(String input) {

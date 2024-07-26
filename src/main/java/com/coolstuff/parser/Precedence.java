@@ -13,6 +13,7 @@ public enum Precedence {
 
     public static Precedence precedenceForToken(TokenType type) {
         return switch (type) {
+            case LPAREN -> Precedence.CALL;
             case EQ, NOT_EQ -> Precedence.EQUALS;
             case LT, GT -> Precedence.LESS_GREATER;
             case PLUS, MINUS -> Precedence.SUM;
