@@ -1,6 +1,9 @@
 package com.coolstuff.repl;
 
 import com.coolstuff.ast.Program;
+import com.coolstuff.evaluator.EvaluationException;
+import com.coolstuff.evaluator.Evaluator;
+import com.coolstuff.evaluator.object.MonkeyObject;
 import com.coolstuff.lexer.Lexer;
 import com.coolstuff.parser.Parser;
 
@@ -31,12 +34,19 @@ public class REPL {
 
             Lexer l = new Lexer(input);
             Parser p = new Parser(l);
+            Evaluator e = new Evaluator();
             Program program = p.parseProgram();
             if (!p.getErrors().isEmpty()) {
                 printParseErrors(p.getErrors());
                 continue;
             }
-            System.out.printf("%s\n", program.string());
+            try {
+                MonkeyObject<?> evaluated = e.eval(program);
+                System.out.println(evaluated.inspect());
+
+            } catch (EvaluationException exc) {
+                System.out.println(exc.getMessage());
+            }
         }
     }
 
