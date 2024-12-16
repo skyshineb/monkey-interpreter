@@ -20,7 +20,7 @@ The base version of interpreter is WIP.
 |------------|---------------------|------------|  
 | Lexing     | done ⭐              | 14.01.2024 |
 | Parsing    | done ⭐              | 26.07.2024 |
-| Evaluation | in progress(p. 114) |            |
+| Evaluation | in progress(p. 116) |            |
 | Extension  |                     |            |
 
 

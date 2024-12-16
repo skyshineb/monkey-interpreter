@@ -2,6 +2,7 @@ package com.coolstuff;
 
 import com.coolstuff.evaluator.EvaluationException;
 import com.coolstuff.evaluator.Evaluator;
+import com.coolstuff.evaluator.object.MonkeyBoolean;
 import com.coolstuff.evaluator.object.MonkeyInteger;
 import com.coolstuff.evaluator.object.MonkeyObject;
 import com.coolstuff.lexer.Lexer;
@@ -28,12 +29,32 @@ public class EvaluatorTest {
         }
     }
 
+    private record EvalBooleanTestCase(String input, boolean expected) {}
+
+    @Test
+    public void testEvalBooleanExpression() throws EvaluationException {
+        var tests = List.of(
+            new EvalBooleanTestCase("true", true),
+            new EvalBooleanTestCase("false", false)
+        );
+
+        for (var test : tests) {
+            var evaluated = testEval(test.input);
+            testBooleanObject(evaluated, test.expected);
+        }
+    }
+
     private MonkeyObject<?> testEval(String input) throws EvaluationException {
         var l = new Lexer(input);
         var p = new Parser(l);
         var evaluator = new Evaluator();
 
         return evaluator.eval(p.parseProgram());
+    }
+
+    private void testBooleanObject(MonkeyObject<?> monkeyObject, boolean expected) {
+        Assertions.assertInstanceOf(MonkeyBoolean.class, monkeyObject);
+        Assertions.assertEquals(expected, monkeyObject.getObject());
     }
 
     public void testIntegerObject(MonkeyObject<?> monkeyObject, Long expected) {
