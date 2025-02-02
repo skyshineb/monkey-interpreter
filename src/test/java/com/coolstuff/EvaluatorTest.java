@@ -20,7 +20,9 @@ public class EvaluatorTest {
     public void testEvalIntegerExpression() throws EvaluationException {
         var tests = List.of(
                 new EvalIntegerTestCase("5", 5L),
-                new EvalIntegerTestCase("10", 10L)
+                new EvalIntegerTestCase("10", 10L),
+                new EvalIntegerTestCase("-5", -5L),
+                new EvalIntegerTestCase("-10", -10L)
         );
 
         for (var test : tests) {
@@ -50,6 +52,23 @@ public class EvaluatorTest {
         var evaluator = new Evaluator();
 
         return evaluator.eval(p.parseProgram());
+    }
+
+    @Test
+    public void testBangOperator() throws EvaluationException {
+        var tests = List.of(
+                new EvalBooleanTestCase("!true", false),
+                new EvalBooleanTestCase("!false", true),
+                new EvalBooleanTestCase("!5", false),
+                new EvalBooleanTestCase("!!true", true),
+                new EvalBooleanTestCase("!!false", false),
+                new EvalBooleanTestCase("!!5", true)
+        );
+
+        for (var test : tests) {
+            var evaluated = testEval(test.input);
+            testBooleanObject(evaluated, test.expected);
+        }
     }
 
     private void testBooleanObject(MonkeyObject<?> monkeyObject, boolean expected) {

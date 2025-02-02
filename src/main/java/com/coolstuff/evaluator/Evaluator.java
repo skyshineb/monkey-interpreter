@@ -15,7 +15,37 @@ public class Evaluator {
             case ExpressionStatement expressionStatement -> eval(expressionStatement.expression());
             case IntegerLiteralExpression integerLiteral -> new MonkeyInteger(integerLiteral.value());
             case BooleanExpression booleanLiteral -> MonkeyBoolean.nativeToMonkey(booleanLiteral.value());
+            case PrefixExpression prefixExpression -> evalPrefixExpression(prefixExpression);
             default -> throw new EvaluationException("Unexpected value: " + node);
+        };
+    }
+
+    private MonkeyObject<?> evalPrefixExpression(PrefixExpression prefixExpression) throws EvaluationException {
+        var expressionResult = eval(prefixExpression.right());
+
+        return switch (prefixExpression.token().type()) {
+            case BANG -> MonkeyBoolean.nativeToMonkey(!isTruth(expressionResult));
+            case MINUS -> {
+                if (expressionResult instanceof MonkeyInteger integer) {
+                    yield new MonkeyInteger(-integer.getObject());
+                }
+
+                if (expressionResult instanceof MonkeyNull nullInstance) {
+                    yield nullInstance;
+                }
+
+                throw new EvaluationException(String.format("Operation - not supported for type %s", expressionResult.getType().name()));
+
+            }
+            default -> MonkeyNull.INSTANCE;
+        };
+    }
+
+    private static boolean isTruth(MonkeyObject<?> object) {
+        return switch (object) {
+            case MonkeyBoolean bool -> bool.getObject();
+            case MonkeyNull ignored -> false;
+            default -> true;
         };
     }
 
