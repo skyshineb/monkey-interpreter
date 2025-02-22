@@ -1,11 +1,9 @@
 package com.coolstuff.evaluator;
 
 import com.coolstuff.ast.*;
+import com.coolstuff.ast.Nodes.BlockStatement;
 import com.coolstuff.ast.Nodes.ExpressionStatement;
-import com.coolstuff.evaluator.object.MonkeyBoolean;
-import com.coolstuff.evaluator.object.MonkeyInteger;
-import com.coolstuff.evaluator.object.MonkeyNull;
-import com.coolstuff.evaluator.object.MonkeyObject;
+import com.coolstuff.evaluator.object.*;
 
 public class Evaluator {
 
@@ -16,7 +14,61 @@ public class Evaluator {
             case IntegerLiteralExpression integerLiteral -> new MonkeyInteger(integerLiteral.value());
             case BooleanExpression booleanLiteral -> MonkeyBoolean.nativeToMonkey(booleanLiteral.value());
             case PrefixExpression prefixExpression -> evalPrefixExpression(prefixExpression);
+            case InfixExpression infixExpression -> evalInfixExpression(infixExpression);
+            case BlockStatement blockStatement -> evalStatements(blockStatement.statements());
+            case IfExpression ifExpression -> evalIfExpression(ifExpression);
             default -> throw new EvaluationException("Unexpected value: " + node);
+        };
+    }
+
+    private MonkeyObject<?> evalIfExpression(IfExpression ifExpression) throws EvaluationException {
+        var condition = eval(ifExpression.condition());
+
+        if (isTruth(condition)) {
+            return eval(ifExpression.consequence());
+        } else if (ifExpression.alternative() != null) {
+            return eval(ifExpression.alternative());
+        } else {
+            return MonkeyNull.INSTANCE;
+        }
+    }
+
+    private MonkeyObject<?> evalInfixExpression(InfixExpression infixExpression) throws EvaluationException {
+        var left = eval(infixExpression.left());
+        var right = eval(infixExpression.right());
+
+        if (left.getType() == ObjectType.INTEGER && right.getType() == ObjectType.INTEGER) {
+            return evalIntegerInfixExpression((MonkeyInteger) left, (MonkeyInteger) right, infixExpression);
+        }
+
+        switch (infixExpression.token().type()) {
+            case EQ -> {
+                return MonkeyBoolean.nativeToMonkey(((MonkeyBoolean) left).getObject() == ((MonkeyBoolean) right).getObject());
+            }
+            case NOT_EQ -> {
+                return MonkeyBoolean.nativeToMonkey(((MonkeyBoolean) left).getObject() != ((MonkeyBoolean) right).getObject());
+            }
+        }
+
+        return MonkeyNull.INSTANCE;
+    }
+
+    private MonkeyObject<?> evalIntegerInfixExpression(MonkeyInteger left, MonkeyInteger right, InfixExpression infixExpression) throws EvaluationException {
+        return switch (infixExpression.token().type()) {
+            case PLUS -> new MonkeyInteger(left.getObject() + right.getObject());
+            case MINUS -> new MonkeyInteger(left.getObject() - right.getObject());
+            case ASTERISK -> new MonkeyInteger(left.getObject() * right.getObject());
+            case SLASH -> {
+                if (right.getObject().equals(0L)) {
+                    throw new EvaluationException("Cannot divide by 0!");
+                }
+                yield new MonkeyInteger(left.getObject() / right.getObject());
+            }
+            case LT -> MonkeyBoolean.nativeToMonkey(left.getObject() < right.getObject());
+            case GT -> MonkeyBoolean.nativeToMonkey(left.getObject() > right.getObject());
+            case EQ -> MonkeyBoolean.nativeToMonkey(left.getObject().equals(right.getObject()));
+            case NOT_EQ -> MonkeyBoolean.nativeToMonkey(!left.getObject().equals(right.getObject()));
+            default -> MonkeyNull.INSTANCE;
         };
     }
 
