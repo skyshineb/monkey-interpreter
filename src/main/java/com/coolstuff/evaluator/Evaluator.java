@@ -3,22 +3,30 @@ package com.coolstuff.evaluator;
 import com.coolstuff.ast.*;
 import com.coolstuff.ast.Nodes.BlockStatement;
 import com.coolstuff.ast.Nodes.ExpressionStatement;
+import com.coolstuff.ast.Nodes.ReturnStatement;
 import com.coolstuff.evaluator.object.*;
 
 public class Evaluator {
 
     public MonkeyObject<?> eval(Node node) throws EvaluationException {
         return switch (node) {
-            case Program astProgram -> evalStatements(astProgram.statements());
+            case Program astProgram -> evalStatements(astProgram.statements(), true);
             case ExpressionStatement expressionStatement -> eval(expressionStatement.expression());
             case IntegerLiteralExpression integerLiteral -> new MonkeyInteger(integerLiteral.value());
             case BooleanExpression booleanLiteral -> MonkeyBoolean.nativeToMonkey(booleanLiteral.value());
             case PrefixExpression prefixExpression -> evalPrefixExpression(prefixExpression);
             case InfixExpression infixExpression -> evalInfixExpression(infixExpression);
-            case BlockStatement blockStatement -> evalStatements(blockStatement.statements());
+            case BlockStatement blockStatement -> evalStatements(blockStatement.statements(), false);
             case IfExpression ifExpression -> evalIfExpression(ifExpression);
+            case ReturnStatement returnStatement -> evalReturnStatement(returnStatement);
             default -> throw new EvaluationException("Unexpected value: " + node);
         };
+    }
+
+    private MonkeyObject<?> evalReturnStatement(ReturnStatement returnStatement) throws EvaluationException {
+        var returnValue = eval(returnStatement.returnValue());
+
+        return new MonkeyReturn<>(returnValue);
     }
 
     private MonkeyObject<?> evalIfExpression(IfExpression ifExpression) throws EvaluationException {
@@ -50,7 +58,12 @@ public class Evaluator {
             }
         }
 
-        return MonkeyNull.INSTANCE;
+        throw new EvaluationException(
+                "Operation %s not supported for types %s and %s",
+                infixExpression.token().token(),
+                left.getType(),
+                right.getType()
+        );
     }
 
     private MonkeyObject<?> evalIntegerInfixExpression(MonkeyInteger left, MonkeyInteger right, InfixExpression infixExpression) throws EvaluationException {
@@ -68,7 +81,8 @@ public class Evaluator {
             case GT -> MonkeyBoolean.nativeToMonkey(left.getObject() > right.getObject());
             case EQ -> MonkeyBoolean.nativeToMonkey(left.getObject().equals(right.getObject()));
             case NOT_EQ -> MonkeyBoolean.nativeToMonkey(!left.getObject().equals(right.getObject()));
-            default -> MonkeyNull.INSTANCE;
+            // should be unreachable
+            default -> throw new IllegalStateException("Evaluation BUG: Unexpected value(unreachable code): " + infixExpression.token().token());
         };
     }
 
@@ -89,7 +103,8 @@ public class Evaluator {
                 throw new EvaluationException(String.format("Operation - not supported for type %s", expressionResult.getType().name()));
 
             }
-            default -> MonkeyNull.INSTANCE;
+            // should be unreachable
+            default -> throw new IllegalStateException("Evaluation BUG: Unexpected value(unreachable code): " + prefixExpression.token().token());
         };
     }
 
@@ -101,11 +116,19 @@ public class Evaluator {
         };
     }
 
-    public MonkeyObject<?> evalStatements(Statement[] statements) throws EvaluationException {
+    public MonkeyObject<?> evalStatements(Statement[] statements, boolean unwrapReturn) throws EvaluationException {
         MonkeyObject<?> result = MonkeyNull.INSTANCE;
-        var i = 0;
+
         for (var stmt : statements) {
             result = eval(stmt);
+
+            if (result instanceof MonkeyReturn<?> monkeyReturn) {
+                if (unwrapReturn) {
+                    return monkeyReturn.returnValue;
+                }
+
+                return monkeyReturn;
+            }
         }
 
         return result;

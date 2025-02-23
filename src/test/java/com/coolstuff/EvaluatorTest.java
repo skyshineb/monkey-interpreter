@@ -120,6 +120,74 @@ public class EvaluatorTest {
         }
     }
 
+    @Test
+    public void testReturnStatements() throws EvaluationException {
+        var tests = List.of(
+                new EvalIntegerTestCase("return 10;", 10L),
+                new EvalIntegerTestCase("return 10; 9;", 10L),
+                new EvalIntegerTestCase("return 2 * 5; 9;", 10L),
+                new EvalIntegerTestCase("9; return 2 * 5; 9;", 10L)
+        );
+
+        for (var test : tests) {
+            var evaluated = testEval(test.input);
+            testIntegerObject(evaluated, test.expected);
+        }
+    }
+
+    @Test
+    public void testErrorHandling() throws EvaluationException {
+        var tests = List.of(
+                List.of(
+                        "5 + true;",
+                        "Error evaluating the program: Operation + not supported for types INTEGER and BOOLEAN"
+                ),
+                List.of(
+                        "5 + true; 5;",
+                        "Error evaluating the program: Operation + not supported for types INTEGER and BOOLEAN"
+                ),
+                List.of(
+                        "-true",
+                        "Error evaluating the program: Operation - not supported for type BOOLEAN"
+                ),
+                List.of(
+                        "true + false;",
+                        "Error evaluating the program: Operation + not supported for types BOOLEAN and BOOLEAN"
+                ),
+                List.of(
+                        "5; true + false; 5",
+                        "Error evaluating the program: Operation + not supported for types BOOLEAN and BOOLEAN"
+                ),
+                List.of(
+                        "if (10 > 1) { true + false; }",
+                        "Error evaluating the program: Operation + not supported for types BOOLEAN and BOOLEAN"
+                ),
+                List.of(
+                        """
+                                if (10 > 1) {
+                                    if (10 > 1) {
+                                        return true + false;
+                                    }
+                                    return 1;
+                                }""",
+                        "Error evaluating the program: Operation + not supported for types BOOLEAN and BOOLEAN"
+                )
+        );
+
+        for (var test : tests) {
+            EvaluationException exception = null;
+            System.out.print(test.getFirst());
+            try {
+                testEval(test.getFirst());
+            } catch (EvaluationException e) {
+                exception = e;
+            }
+            Assertions.assertNotNull(exception);
+            Assertions.assertEquals(test.get(1), exception.getMessage());
+            System.out.println(" ---> OK");
+        }
+    }
+
     private void testObject(MonkeyObject<?> evaluated, Object expected) {
         switch (evaluated.getType()) {
             case INTEGER -> testIntegerObject(evaluated, (Long) expected);
