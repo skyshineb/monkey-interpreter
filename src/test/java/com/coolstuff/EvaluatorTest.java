@@ -136,7 +136,7 @@ public class EvaluatorTest {
     }
 
     @Test
-    public void testErrorHandling() throws EvaluationException {
+    public void testErrorHandling() {
         var tests = List.of(
                 List.of(
                         "5 + true;",
@@ -171,7 +171,11 @@ public class EvaluatorTest {
                                     return 1;
                                 }""",
                         "Error evaluating the program: Operation + not supported for types BOOLEAN and BOOLEAN"
-                )
+                ),
+                List.of(
+                        "foobar",
+                        "Error evaluating the program: Identifier not found: foobar"
+                        )
         );
 
         for (var test : tests) {
@@ -185,6 +189,23 @@ public class EvaluatorTest {
             Assertions.assertNotNull(exception);
             Assertions.assertEquals(test.get(1), exception.getMessage());
             System.out.println(" ---> OK");
+        }
+    }
+
+    private record LetTestCase(String input, Long expected) {}
+
+    @Test
+    public void testLetStatements() throws EvaluationException {
+        var tests = List.of(
+                new LetTestCase("let a = 5; a;", 5L),
+                new LetTestCase("let a = 5 * 5; a;", 25L),
+                new LetTestCase("let a = 5; let b = a; b;", 5L),
+                new LetTestCase("let a = 5; let b = a; let c = a + b + 5; c;", 15L)
+        );
+
+        for (var test : tests) {
+            var evaluated = testEval(test.input);
+            testIntegerObject(evaluated, test.expected);
         }
     }
 

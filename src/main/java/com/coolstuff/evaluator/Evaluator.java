@@ -3,10 +3,19 @@ package com.coolstuff.evaluator;
 import com.coolstuff.ast.*;
 import com.coolstuff.ast.Nodes.BlockStatement;
 import com.coolstuff.ast.Nodes.ExpressionStatement;
+import com.coolstuff.ast.Nodes.LetStatement;
 import com.coolstuff.ast.Nodes.ReturnStatement;
 import com.coolstuff.evaluator.object.*;
 
+import java.util.Optional;
+
 public class Evaluator {
+
+    private final Environment environment;
+
+    public Evaluator() {
+        this.environment = new Environment();
+    }
 
     public MonkeyObject<?> eval(Node node) throws EvaluationException {
         return switch (node) {
@@ -19,8 +28,25 @@ public class Evaluator {
             case BlockStatement blockStatement -> evalStatements(blockStatement.statements(), false);
             case IfExpression ifExpression -> evalIfExpression(ifExpression);
             case ReturnStatement returnStatement -> evalReturnStatement(returnStatement);
+            case LetStatement letStatement -> evalLetStatement(letStatement);
+            case IdentifierExpression identifierExpression -> evalIdentifierExpression(identifierExpression);
             default -> throw new EvaluationException("Unexpected value: " + node);
         };
+    }
+
+    private MonkeyObject<?> evalIdentifierExpression(IdentifierExpression identifierExpression) throws EvaluationException {
+        Optional<MonkeyObject<?>> resolvedValue = environment.get(identifierExpression.value());
+
+        if (resolvedValue.isEmpty()) {
+            throw new EvaluationException("Identifier not found: %s", identifierExpression.value());
+        }
+
+        return resolvedValue.get();
+    }
+
+    private MonkeyObject<?> evalLetStatement(LetStatement letStatement) throws EvaluationException {
+        var resolvedValue = eval(letStatement.value());
+        return environment.set(letStatement.name().value(), resolvedValue);
     }
 
     private MonkeyObject<?> evalReturnStatement(ReturnStatement returnStatement) throws EvaluationException {
