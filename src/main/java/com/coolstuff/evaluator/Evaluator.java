@@ -7,7 +7,10 @@ import com.coolstuff.ast.Nodes.LetStatement;
 import com.coolstuff.ast.Nodes.ReturnStatement;
 import com.coolstuff.evaluator.object.*;
 
+import java.util.Arrays;
 import java.util.Optional;
+import java.util.stream.Collectors;
+
 
 public class Evaluator {
 
@@ -15,6 +18,10 @@ public class Evaluator {
 
     public Evaluator() {
         this.environment = new Environment();
+    }
+
+    public Evaluator(Environment environment) {
+        this.environment = environment;
     }
 
     public MonkeyObject<?> eval(Node node) throws EvaluationException {
@@ -30,8 +37,52 @@ public class Evaluator {
             case ReturnStatement returnStatement -> evalReturnStatement(returnStatement);
             case LetStatement letStatement -> evalLetStatement(letStatement);
             case IdentifierExpression identifierExpression -> evalIdentifierExpression(identifierExpression);
+            case FunctionLiteral functionLiteral -> evalFunction(functionLiteral);
+            case CallExpression callExpression -> evalCallExpression(callExpression);
             default -> throw new EvaluationException("Unexpected value: " + node);
         };
+    }
+
+    private MonkeyObject<?> evalCallExpression(CallExpression node) throws EvaluationException {
+        var function = eval(node.function());
+        var args = evalExpressions(node.arguments());
+        return applyFunction(function, args);
+    }
+
+    private MonkeyObject<?> applyFunction(MonkeyObject<?> function, MonkeyObject<?>[] args) throws EvaluationException {
+        if (!(function instanceof MonkeyFunction)) {
+            throw new EvaluationException("Not a function: %s", function.inspect());
+        }
+        var newEnv = ((MonkeyFunction) function).getEnvironment();
+        for (int i = 0; i < ((MonkeyFunction) function).getParameters().length; i++) {
+            var parameter = ((MonkeyFunction) function).getParameters()[i];
+            newEnv.set(parameter.value(), args[i]);
+        }
+        var evaluator = new Evaluator(newEnv);
+        return evaluator.eval(((MonkeyFunction) function).getBody());
+    }
+
+    private MonkeyObject<?>[] evalExpressions(Expression[] expressions) throws EvaluationException {
+        try {
+            return Arrays.stream(expressions).map(expr -> {
+                try {
+                    return eval(expr);
+                } catch (EvaluationException e) {
+                    throw new RuntimeException(e);
+                }
+            }).toList().toArray(MonkeyObject[]::new);
+        } catch (RuntimeException e) {
+            if (e.getCause() instanceof EvaluationException) {
+                throw (EvaluationException) e.getCause();
+            }
+            throw e;
+        }
+    }
+
+    private MonkeyObject<?> evalFunction(FunctionLiteral functionLiteral) {
+        var params = functionLiteral.parameters();
+        var body = functionLiteral.body();
+        return new MonkeyFunction(params, body, new Environment(environment));
     }
 
     private MonkeyObject<?> evalIdentifierExpression(IdentifierExpression identifierExpression) throws EvaluationException {

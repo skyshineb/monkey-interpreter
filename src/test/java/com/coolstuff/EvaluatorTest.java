@@ -2,10 +2,7 @@ package com.coolstuff;
 
 import com.coolstuff.evaluator.EvaluationException;
 import com.coolstuff.evaluator.Evaluator;
-import com.coolstuff.evaluator.object.MonkeyBoolean;
-import com.coolstuff.evaluator.object.MonkeyInteger;
-import com.coolstuff.evaluator.object.MonkeyNull;
-import com.coolstuff.evaluator.object.MonkeyObject;
+import com.coolstuff.evaluator.object.*;
 import com.coolstuff.lexer.Lexer;
 import com.coolstuff.parser.Parser;
 import org.junit.jupiter.api.Assertions;
@@ -207,6 +204,53 @@ public class EvaluatorTest {
             var evaluated = testEval(test.input);
             testIntegerObject(evaluated, test.expected);
         }
+    }
+
+    @Test
+    public void testFunctionObject() throws EvaluationException {
+        var input = "fn(x){ x + 2; } ;";
+        var evaluated = testEval(input);
+
+        Assertions.assertInstanceOf(MonkeyFunction.class, evaluated);
+        var function = (MonkeyFunction) evaluated;
+        Assertions.assertEquals(1, function.getParameters().length);
+        Assertions.assertEquals("x" ,function.getParameters()[0].value());
+
+        var expectedBody = "(x + 2)";
+
+        Assertions.assertEquals(expectedBody, function.getBody().string());
+    }
+
+    private record FunctionApplicationTestCase(String input, Long expected) {}
+
+    @Test
+    public void testFunctionApplication() throws EvaluationException {
+        var tests = List.of(
+                new FunctionApplicationTestCase("let identity = fn(x) { x; }; identity(5);", 5L),
+                new FunctionApplicationTestCase("let identity = fn(x) { return x; }; identity(5);", 5L),
+                new FunctionApplicationTestCase("let double = fn(x) { x * 2; }; double(5);", 10L),
+                new FunctionApplicationTestCase("let add = fn(x, y) { x + y; }; add(5, 5);", 10L),
+                new FunctionApplicationTestCase("let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));", 20L),
+                new FunctionApplicationTestCase("fn(x) { x; }(5)", 5L)
+        );
+
+        for (var test : tests) {
+            var evaluated = testEval(test.input);
+            testIntegerObject(evaluated, test.expected);
+        }
+    }
+
+    @Test
+    public void testClosures() throws EvaluationException {
+        var input = """
+                let newAdder = fn(x) {
+                fn(y) { x + y };
+                };
+                let addTwo = newAdder(2);
+                addTwo(2);""";
+
+        var evaluated = testEval(input);
+        testIntegerObject(evaluated, 4L);
     }
 
     private void testObject(MonkeyObject<?> evaluated, Object expected) {

@@ -1,8 +1,10 @@
 package com.coolstuff.ast.Nodes;
 
-import com.coolstuff.ast.Expression;
 import com.coolstuff.ast.Statement;
 import com.coolstuff.token.Token;
+
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 public record BlockStatement(Token token, Statement[] statements) implements Statement {
     @Override
@@ -12,12 +14,7 @@ public record BlockStatement(Token token, Statement[] statements) implements Sta
 
     @Override
     public String string() {
-        StringBuilder builder = new StringBuilder();
-        for (Statement s : statements) {
-            builder.append(s.string()).append('\n');
-        }
-
-        return builder.toString();
+        return Arrays.stream(statements).map(Statement::string).collect(Collectors.joining("\n"));
     }
 
     @Override

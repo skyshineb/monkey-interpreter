@@ -7,8 +7,15 @@ import java.util.Optional;
 
 public class Environment {
     private final HashMap<String, MonkeyObject<?>> bindings = new HashMap<>();
+    private final Environment upper;
 
-    public Environment() {}
+    public Environment() {
+        this.upper = null;
+    }
+
+    public Environment(Environment upper) {
+        this.upper = upper;
+    }
 
     public <T> MonkeyObject<T> set(String name, MonkeyObject<T> value) {
         bindings.put(name, value);
@@ -19,7 +26,10 @@ public class Environment {
         var value = bindings.get(name);
 
         if (value == null) {
-            return Optional.empty();
+            if (upper == null) {
+                return Optional.empty();
+            }
+            return upper.get(name);
         }
 
         return Optional.of(value);
