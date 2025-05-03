@@ -174,8 +174,13 @@ public class Parser {
             case LPAREN -> this::parseGroupedExpression;
             case IF -> this::parseIfExpression;
             case FUNCTION -> this::parseFunctionLiteral;
+            case STRING -> this::parseStringLiteral;
             default -> null;
         };
+    }
+
+    private Expression parseStringLiteral() {
+        return new StringLiteralExpression(curToken, curToken.token());
     }
 
     private Expression parseFunctionLiteral() {

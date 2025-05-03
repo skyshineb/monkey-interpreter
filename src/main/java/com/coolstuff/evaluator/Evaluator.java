@@ -9,7 +9,6 @@ import com.coolstuff.evaluator.object.*;
 
 import java.util.Arrays;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 
 public class Evaluator {
@@ -39,6 +38,7 @@ public class Evaluator {
             case IdentifierExpression identifierExpression -> evalIdentifierExpression(identifierExpression);
             case FunctionLiteral functionLiteral -> evalFunction(functionLiteral);
             case CallExpression callExpression -> evalCallExpression(callExpression);
+            case StringLiteralExpression stringLiteral -> new MonkeyString(stringLiteral.value());
             default -> throw new EvaluationException("Unexpected value: " + node);
         };
     }

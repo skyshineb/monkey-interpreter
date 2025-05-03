@@ -163,6 +163,20 @@ public class ParserTest {
         }
     }
 
+    @Test
+    public void testParsingStringExpressions() {
+        var input = "\"Hello World!\"";
+        var program = buildProgram(input);
+        if (program.statements().length != 1) {
+            Assertions.fail("program.statements[] should contain 1 statement");
+        }
+        Assertions.assertInstanceOf(ExpressionStatement.class, program.statements()[0]);
+
+        var stmt = (ExpressionStatement) program.statements()[0];
+        Assertions.assertInstanceOf(StringLiteralExpression.class, stmt.expression());
+        Assertions.assertEquals("Hello World!", program.statements()[0].tokenLiteral());
+    }
+
     private void testIntegerLiteral(Expression exp, Long value) {
         Assertions.assertInstanceOf(IntegerLiteralExpression.class, exp);
         var integ = (IntegerLiteralExpression) exp;

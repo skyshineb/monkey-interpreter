@@ -53,6 +53,8 @@ public class TokenTest {
                 
                 10 == 10;
                 10 != 9;
+                "foobar"
+                "foo bar"
                 """;
         Lexer lexer = new Lexer(input);
         Token[] expected = {
@@ -129,6 +131,8 @@ public class TokenTest {
                 new Token(TokenType.NOT_EQ, "!="),
                 new Token(TokenType.INT, "9"),
                 new Token(TokenType.SEMICOLON, ";"),
+                new Token(TokenType.STRING, "foobar"),
+                new Token(TokenType.STRING, "foo bar"),
                 new Token(TokenType.EOF, "eof"),
         };
         Assertions.assertDoesNotThrow(() -> {

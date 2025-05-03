@@ -253,6 +253,18 @@ public class EvaluatorTest {
         testIntegerObject(evaluated, 4L);
     }
 
+    @Test
+    public void testStrings() throws EvaluationException {
+        var input = "\"Hello World!\"";
+        var evaluated = testEval(input);
+        testStringObject(evaluated, "Hello World!");
+    }
+
+    private void testStringObject(MonkeyObject<?> monkeyObject, Object expected) {
+        Assertions.assertInstanceOf(MonkeyString.class, monkeyObject);
+        Assertions.assertEquals(expected, monkeyObject.getObject());
+    }
+
     private void testObject(MonkeyObject<?> evaluated, Object expected) {
         switch (evaluated.getType()) {
             case INTEGER -> testIntegerObject(evaluated, (Long) expected);

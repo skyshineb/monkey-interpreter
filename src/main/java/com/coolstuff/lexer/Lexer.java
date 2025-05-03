@@ -59,6 +59,7 @@ public class Lexer {
             case ',' -> tok = TokenType.COMMA.token();
             case '{' -> tok = TokenType.LBRACE.token();
             case '}' -> tok = TokenType.RBRACE.token();
+            case '"' -> tok = new Token(TokenType.STRING, readString());
             case 0 -> tok = TokenType.EOF.token();
             default -> {
                 if (Character.isJavaIdentifierStart(ch)) {
@@ -112,5 +113,13 @@ public class Lexer {
             readChar();
         }
         return input.substring(pos, position);
+    }
+
+    public String readString() {
+        var pos = this.position + 1;
+        do {
+            readChar();
+        } while (ch != '"' && ch != 0);
+        return input.substring(pos, this.position);
     }
 }
