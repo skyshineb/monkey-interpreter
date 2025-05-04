@@ -172,7 +172,11 @@ public class EvaluatorTest {
                 List.of(
                         "foobar",
                         "Error evaluating the program: Identifier not found: foobar"
-                        )
+                        ),
+                List.of(
+                        "\"Hello\" - \"World\"",
+                        "Error evaluating the program: Operation - not supported for types STRING and STRING"
+                )
         );
 
         for (var test : tests) {
@@ -213,12 +217,12 @@ public class EvaluatorTest {
 
         Assertions.assertInstanceOf(MonkeyFunction.class, evaluated);
         var function = (MonkeyFunction) evaluated;
-        Assertions.assertEquals(1, function.getParameters().length);
-        Assertions.assertEquals("x" ,function.getParameters()[0].value());
+        Assertions.assertEquals(1, function.getFunctionLiteral().parameters().length);
+        Assertions.assertEquals("x" ,function.getFunctionLiteral().parameters()[0].value());
 
         var expectedBody = "(x + 2)";
 
-        Assertions.assertEquals(expectedBody, function.getBody().string());
+        Assertions.assertEquals(expectedBody, function.getFunctionLiteral().body().string());
     }
 
     private record FunctionApplicationTestCase(String input, Long expected) {}
@@ -258,6 +262,36 @@ public class EvaluatorTest {
         var input = "\"Hello World!\"";
         var evaluated = testEval(input);
         testStringObject(evaluated, "Hello World!");
+    }
+
+    @Test
+    public void testStringConcatenation() throws EvaluationException {
+        var input = "\"Hello\" + \"World\"";
+        var evaluated = testEval(input);
+        testStringObject(evaluated, "HelloWorld");
+    }
+
+
+    private record BuiltInFunctionsTestCase(String input, Object expected) {}
+    @Test
+    public void testBuiltInFunctions() throws EvaluationException {
+        var tests = List.of(
+                new BuiltInFunctionsTestCase("len(\"\")", 0L),
+                new BuiltInFunctionsTestCase("len(\"four\")", 4L),
+                new BuiltInFunctionsTestCase("len(\"hello world\")", 11L),
+                new BuiltInFunctionsTestCase("len(1)", "Error evaluating the program: Argument to `len` not supported, got INTEGER"),
+                new BuiltInFunctionsTestCase("len(\"one\", \"two\")", "Error evaluating the program: Wrong number of arguments. Expected 1, got 2")
+        );
+
+        for (var test : tests) {
+            try {
+                var evaluated = testEval(test.input);
+                testObject(evaluated, test.expected);
+            } catch (EvaluationException e) {
+                Assertions.assertEquals(test.expected, e.getMessage());
+            }
+
+        }
     }
 
     private void testStringObject(MonkeyObject<?> monkeyObject, Object expected) {

@@ -45,21 +45,13 @@ public class Evaluator {
 
     private MonkeyObject<?> evalCallExpression(CallExpression node) throws EvaluationException {
         var function = eval(node.function());
-        var args = evalExpressions(node.arguments());
-        return applyFunction(function, args);
-    }
 
-    private MonkeyObject<?> applyFunction(MonkeyObject<?> function, MonkeyObject<?>[] args) throws EvaluationException {
-        if (!(function instanceof MonkeyFunction)) {
+        if (function instanceof AbstractMonkeyFunction functionToCall) {
+            var args = evalExpressions(node.arguments());
+            return functionToCall.getObject().apply(node.token(), Arrays.stream(args).toList());
+        } else {
             throw new EvaluationException("Not a function: %s", function.inspect());
         }
-        var newEnv = ((MonkeyFunction) function).getEnvironment();
-        for (int i = 0; i < ((MonkeyFunction) function).getParameters().length; i++) {
-            var parameter = ((MonkeyFunction) function).getParameters()[i];
-            newEnv.set(parameter.value(), args[i]);
-        }
-        var evaluator = new Evaluator(newEnv);
-        return evaluator.eval(((MonkeyFunction) function).getBody());
     }
 
     private MonkeyObject<?>[] evalExpressions(Expression[] expressions) throws EvaluationException {
@@ -82,14 +74,15 @@ public class Evaluator {
     private MonkeyObject<?> evalFunction(FunctionLiteral functionLiteral) {
         var params = functionLiteral.parameters();
         var body = functionLiteral.body();
-        return new MonkeyFunction(params, body, new Environment(environment));
+        return new MonkeyFunction(environment, functionLiteral);
     }
 
     private MonkeyObject<?> evalIdentifierExpression(IdentifierExpression identifierExpression) throws EvaluationException {
         Optional<MonkeyObject<?>> resolvedValue = environment.get(identifierExpression.value());
 
         if (resolvedValue.isEmpty()) {
-            throw new EvaluationException("Identifier not found: %s", identifierExpression.value());
+            return BuiltInFunctions.getFunction(identifierExpression.value()).orElseThrow(() ->
+                    new EvaluationException("Identifier not found: %s", identifierExpression.value()));
         }
 
         return resolvedValue.get();
@@ -124,6 +117,8 @@ public class Evaluator {
 
         if (left.getType() == ObjectType.INTEGER && right.getType() == ObjectType.INTEGER) {
             return evalIntegerInfixExpression((MonkeyInteger) left, (MonkeyInteger) right, infixExpression);
+        } else if (left.getType() == ObjectType.STRING && right.getType() == ObjectType.STRING) {
+            return evalStringInfixExpression((MonkeyString) left, (MonkeyString) right, infixExpression);
         }
 
         switch (infixExpression.token().type()) {
@@ -160,6 +155,18 @@ public class Evaluator {
             case NOT_EQ -> MonkeyBoolean.nativeToMonkey(!left.getObject().equals(right.getObject()));
             // should be unreachable
             default -> throw new IllegalStateException("Evaluation BUG: Unexpected value(unreachable code): " + infixExpression.token().token());
+        };
+    }
+
+    private MonkeyObject<?> evalStringInfixExpression(MonkeyString left, MonkeyString right, InfixExpression infixExpression) throws EvaluationException {
+        return switch (infixExpression.token().type()) {
+            case PLUS -> new MonkeyString(left.getObject() + right.getObject());
+            default -> throw new EvaluationException(
+                    "Operation %s not supported for types %s and %s",
+                    infixExpression.token().token(),
+                    left.getType(),
+                    right.getType()
+            );
         };
     }
 
