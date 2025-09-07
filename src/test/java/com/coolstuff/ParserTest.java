@@ -237,6 +237,35 @@ public class ParserTest {
     }
 
     @Test
+    public void testParsingArrayLiterals() {
+        var input = "[1, 2 * 2, 3 + 3]";
+        var program = buildProgram(input);
+
+        Assertions.assertEquals(1, program.statements().length);
+        var stmt = Assertions.assertInstanceOf(ExpressionStatement.class, program.statements()[0]);
+        var array = Assertions.assertInstanceOf(ArrayLiteral.class, stmt.expression());
+
+        Assertions.assertEquals(3, array.elements().length);
+
+        testIntegerLiteral(array.elements()[0], 1L);
+        testInfixExpression(array.elements()[1], 2, "*", 2);
+        testInfixExpression(array.elements()[2], 3, "+", 3);
+    }
+
+    @Test
+    public void testParsingIndexExpression() {
+        var input = "myArray[1 + 1]";
+        var program = buildProgram(input);
+
+        Assertions.assertEquals(1, program.statements().length);
+        var stmt = Assertions.assertInstanceOf(ExpressionStatement.class, program.statements()[0]);
+        var indxEx = Assertions.assertInstanceOf(IndexExpression.class, stmt.expression());
+
+        testIdentifier(indxEx.left(), "myArray");
+        testInfixExpression(indxEx.index(), 1, "+", 1);
+    }
+
+    @Test
     public void testFunctionLiteralParsing() {
         var input = "fn(x, y) {x+ y;}";
         var program = buildProgram(input);
@@ -331,7 +360,11 @@ public class ParserTest {
                 new OperatorPrecedenceTestCase("add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))",
                         "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))"),
                 new OperatorPrecedenceTestCase("add(a + b + c * d / f + g)",
-                        "add((((a + b) + ((c * d) / f)) + g))")
+                        "add((((a + b) + ((c * d) / f)) + g))"),
+                new OperatorPrecedenceTestCase("a * [1, 2, 3, 4][b * c] * d",
+                        "((a * ([1, 2, 3, 4][(b * c)])) * d)"),
+                new OperatorPrecedenceTestCase("add(a * b[2], b[1], 2 * [1, 2][1])",
+                        "add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))")
         );
 
         for (var testCase : testData) {

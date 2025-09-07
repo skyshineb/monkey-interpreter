@@ -31,6 +31,8 @@ public enum TokenType {
     RPAREN(")"),
     LBRACE("{"),
     RBRACE("}"),
+    LBRACKET("["),
+    RBRACKET("]"),
 
     // keywords
     FUNCTION("fn"),

@@ -9,7 +9,8 @@ public enum Precedence {
     SUM,            // + or -
     PRODUCT,        // * or /
     PREFIX,         // -X or !X
-    CALL;           // myFunction(X)
+    CALL,           // myFunction(X)
+    INDEX;          // array[index]
 
     public static Precedence precedenceForToken(TokenType type) {
         return switch (type) {
@@ -18,6 +19,7 @@ public enum Precedence {
             case LT, GT -> Precedence.LESS_GREATER;
             case PLUS, MINUS -> Precedence.SUM;
             case ASTERISK, SLASH -> Precedence.PRODUCT;
+            case LBRACKET -> Precedence.INDEX;
             default -> Precedence.LOWEST;
         };
     }

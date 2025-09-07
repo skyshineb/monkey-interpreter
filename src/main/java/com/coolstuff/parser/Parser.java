@@ -175,8 +175,39 @@ public class Parser {
             case IF -> this::parseIfExpression;
             case FUNCTION -> this::parseFunctionLiteral;
             case STRING -> this::parseStringLiteral;
+            case LBRACKET -> this::parseArrayLiteral;
             default -> null;
         };
+    }
+
+    private Expression parseArrayLiteral() {
+        Token token = curToken;
+        var elements = parseExpressionList(TokenType.RBRACKET);
+        return new ArrayLiteral(token, elements);
+    }
+
+    private Expression[] parseExpressionList(TokenType end) {
+        ArrayList<Expression> expressionList = new ArrayList<>();
+
+        if (peekTokenIs(end)) {
+            nextToken();
+            return new Expression[0];
+        }
+
+        nextToken();
+        expressionList.add(parseExpression(LOWEST));
+
+        while (peekTokenIs(TokenType.COMMA)) {
+            nextToken();
+            nextToken();
+            expressionList.add(parseExpression(LOWEST));
+        }
+
+        if (!expectPeek(end)) {
+            return null;
+        }
+
+        return expressionList.toArray(new Expression[0]);
     }
 
     private Expression parseStringLiteral() {
@@ -313,8 +344,22 @@ public class Parser {
         return switch (type) {
             case PLUS, MINUS, SLASH, ASTERISK, EQ, NOT_EQ, LT, GT -> this::parseInfixExpression;
             case LPAREN -> this::parseCallExpression;
+            case LBRACKET -> this::parseIndexExpression;
             default -> null;
         };
+    }
+
+    private Expression parseIndexExpression(Expression left) {
+        Token token = curToken;
+
+        nextToken();
+        var index = parseExpression(LOWEST);
+
+        if (!expectPeek(TokenType.RBRACKET)) {
+            return null;
+        }
+
+        return new IndexExpression(token, left, index);
     }
 
     private Expression parseCallExpression(Expression function) {

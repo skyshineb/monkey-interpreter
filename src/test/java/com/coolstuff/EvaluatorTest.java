@@ -294,6 +294,46 @@ public class EvaluatorTest {
         }
     }
 
+    @Test
+    public void testArrayLiterals() throws EvaluationException {
+        var input = "[1, 2 * 2, 3 + 3]";
+
+        var evaluated = testEval(input);
+        var array = Assertions.assertInstanceOf(MonkeyArray.class, evaluated);
+        Assertions.assertEquals(3, array.getObject().size());
+
+        testIntegerObject(array.getObject().get(0), 1L);
+        testIntegerObject(array.getObject().get(1), 4L);
+        testIntegerObject(array.getObject().get(2), 6L);
+    }
+
+    private record ArrayIndexExpressionTestCase(String input, Object expected){}
+    @Test
+    public void testArrayIndexExpression() {
+        var tests = List.of(
+                new ArrayIndexExpressionTestCase("[1, 2, 3][0]", 1L),
+                new ArrayIndexExpressionTestCase("[1, 2, 3][1]", 2L),
+                new ArrayIndexExpressionTestCase("[1, 2, 3][2]", 3L),
+                new ArrayIndexExpressionTestCase("let i = 0; [1][i];", 1L),
+                new ArrayIndexExpressionTestCase("[1, 2, 3][1 + 1];", 3L),
+                new ArrayIndexExpressionTestCase("let myArray = [1, 2, 3]; myArray[2];", 3L),
+                new ArrayIndexExpressionTestCase("let myArray = [1, 2, 3]; myArray[0] + myArray[1] + myArray[2];", 6L),
+                new ArrayIndexExpressionTestCase("let myArray = [1, 2, 3]; let i = myArray[0]; myArray[i]", 2L),
+                new ArrayIndexExpressionTestCase("[1, 2, 3][3]", null),
+                new ArrayIndexExpressionTestCase("[1, 2, 3][-1]", null)
+        );
+
+        for (var test : tests) {
+            try {
+                var evaluated = testEval(test.input);
+                testObject(evaluated, test.expected);
+            } catch (EvaluationException e) {
+                Assertions.assertEquals(test.expected, e.getMessage());
+            }
+
+        }
+    }
+
     private void testStringObject(MonkeyObject<?> monkeyObject, Object expected) {
         Assertions.assertInstanceOf(MonkeyString.class, monkeyObject);
         Assertions.assertEquals(expected, monkeyObject.getObject());

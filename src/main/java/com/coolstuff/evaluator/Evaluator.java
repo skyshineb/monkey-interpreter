@@ -8,6 +8,7 @@ import com.coolstuff.ast.Nodes.ReturnStatement;
 import com.coolstuff.evaluator.object.*;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 
@@ -39,7 +40,24 @@ public class Evaluator {
             case FunctionLiteral functionLiteral -> evalFunction(functionLiteral);
             case CallExpression callExpression -> evalCallExpression(callExpression);
             case StringLiteralExpression stringLiteral -> new MonkeyString(stringLiteral.value());
+            case ArrayLiteral arrayLiteral -> new MonkeyArray(List.of(evalExpressions(arrayLiteral.elements())));
+            case IndexExpression indexExpression -> evalIndexExpression(indexExpression);
             default -> throw new EvaluationException("Unexpected value: " + node);
+        };
+    }
+
+    private MonkeyObject<?> evalIndexExpression(IndexExpression node) throws EvaluationException {
+        var left = eval(node.left());
+        return switch (left) {
+            case MonkeyArray array -> {
+                var index = MonkeyArray.verifyIndexIsInteger(eval(node.index()));
+                if (index.getObject() < 0 || index.getObject() >= array.getObject().size()) {
+                    yield MonkeyNull.INSTANCE;
+                }
+                yield array.getObject().get(index.getObject().intValue());
+
+            }
+            default -> throw new EvaluationException("Index operator not supported for %s", left.getType());
         };
     }
 

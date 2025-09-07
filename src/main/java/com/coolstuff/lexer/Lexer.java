@@ -59,6 +59,8 @@ public class Lexer {
             case ',' -> tok = TokenType.COMMA.token();
             case '{' -> tok = TokenType.LBRACE.token();
             case '}' -> tok = TokenType.RBRACE.token();
+            case '[' -> tok = TokenType.LBRACKET.token();
+            case ']' -> tok = TokenType.RBRACKET.token();
             case '"' -> tok = new Token(TokenType.STRING, readString());
             case 0 -> tok = TokenType.EOF.token();
             default -> {
