@@ -280,7 +280,24 @@ public class EvaluatorTest {
                 new BuiltInFunctionsTestCase("len(\"four\")", 4L),
                 new BuiltInFunctionsTestCase("len(\"hello world\")", 11L),
                 new BuiltInFunctionsTestCase("len(1)", "Error evaluating the program: Argument to `len` not supported, got INTEGER"),
-                new BuiltInFunctionsTestCase("len(\"one\", \"two\")", "Error evaluating the program: Wrong number of arguments. Expected 1, got 2")
+                new BuiltInFunctionsTestCase("len(\"one\", \"two\")", "Error evaluating the program: Wrong number of arguments. Expected 1, got 2"),
+                new BuiltInFunctionsTestCase("len([1,2])", 2L),
+                new BuiltInFunctionsTestCase("first([1,2])", 1L),
+                new BuiltInFunctionsTestCase("first([-5,2])", -5L),
+                new BuiltInFunctionsTestCase("first([\"arra\",2])", "arra"),
+                new BuiltInFunctionsTestCase("first([])", null),
+                new BuiltInFunctionsTestCase("last([1,2,8])", 8L),
+                new BuiltInFunctionsTestCase("last([-5])", -5L),
+                new BuiltInFunctionsTestCase("last([\"arra\",2,\"a\"])", "a"),
+                new BuiltInFunctionsTestCase("rest([\"arra\",2,\"a\"])", List.of(2L, "a")),
+                new BuiltInFunctionsTestCase("rest([1])", List.of()),
+                new BuiltInFunctionsTestCase("rest([])", null),
+                new BuiltInFunctionsTestCase("rest([1 * 1, 2 * 2, 3 * 3])", List.of(4L, 9L)),
+                new BuiltInFunctionsTestCase( "len(rest([1 * 1, 2 * 2, 3 * 3]))", 2L),
+                new BuiltInFunctionsTestCase( "rest(rest(rest(rest([1 * 1, 2 * 2, 3 * 3]))))", null),
+                new BuiltInFunctionsTestCase("push([], \"test\")", List.of("test")),
+                new BuiltInFunctionsTestCase("push(push([], \"test\"), 28)", List.of("test", 28L)),
+                new BuiltInFunctionsTestCase("let arr = []; push(arr, 10); arr", (List.of()))
         );
 
         for (var test : tests) {
@@ -343,6 +360,8 @@ public class EvaluatorTest {
         switch (evaluated.getType()) {
             case INTEGER -> testIntegerObject(evaluated, (Long) expected);
             case BOOLEAN -> testBooleanObject(evaluated, (Boolean) expected);
+            case STRING -> testStringObject(evaluated, (String) expected);
+            case ARRAY_OBJ -> testArrayObject(evaluated, (List<?>) expected);
             case NULL -> testNullObject(evaluated);
             default -> throw new IllegalArgumentException("Not expecting here " + evaluated.getType());
         }
@@ -361,5 +380,14 @@ public class EvaluatorTest {
     public void testIntegerObject(MonkeyObject<?> monkeyObject, Long expected) {
         Assertions.assertInstanceOf(MonkeyInteger.class, monkeyObject);
         Assertions.assertEquals(expected, monkeyObject.getObject());
+    }
+
+    private void testArrayObject(MonkeyObject<?> object, List<?> expected) {
+        var array = Assertions.assertInstanceOf(MonkeyArray.class, object);
+        Assertions.assertEquals(expected.size(), array.getObject().size());
+
+        for (int i = 0; i < expected.size(); i++) {
+            testObject(array.getObject().get(i), expected.get(i));
+        }
     }
 }
