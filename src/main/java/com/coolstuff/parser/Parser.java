@@ -176,8 +176,37 @@ public class Parser {
             case FUNCTION -> this::parseFunctionLiteral;
             case STRING -> this::parseStringLiteral;
             case LBRACKET -> this::parseArrayLiteral;
+            case LBRACE -> this::parseHashLiteral;
             default -> null;
         };
+    }
+
+    private Expression parseHashLiteral() {
+        Token token = curToken;
+        var expressions = new ArrayList<KVPair>();
+
+        while (!peekTokenIs(TokenType.RBRACE)) {
+            nextToken();
+
+            var key = parseExpression(LOWEST);
+            if (!expectPeek(TokenType.COLON)) {
+                return null;
+            }
+            nextToken();
+
+            var value = parseExpression(LOWEST);
+
+            if (!peekTokenIs(TokenType.RBRACE) && !expectPeek(TokenType.COMMA)) {
+                return null;
+            }
+            expressions.add(new KVPair(key, value));
+        }
+
+        if (!expectPeek(TokenType.RBRACE)) {
+            return null;
+        }
+
+        return new HashLiteral(token, expressions);
     }
 
     private Expression parseArrayLiteral() {

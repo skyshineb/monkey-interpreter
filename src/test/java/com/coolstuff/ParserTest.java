@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 public class ParserTest {
@@ -197,11 +198,18 @@ public class ParserTest {
         Assertions.assertEquals(String.valueOf(value), expr.tokenLiteral());
     }
 
+    private void testStringLiteral(Expression expr, String value) {
+        Assertions.assertInstanceOf(StringLiteralExpression.class, expr);
+        Assertions.assertEquals(value, ((StringLiteralExpression)expr).value());
+        Assertions.assertEquals(value, expr.tokenLiteral());
+    }
+
     private void testLiteralExpression(Expression expr, Object expected) {
         switch (expected) {
             case Integer i -> testIntegerLiteral(expr, i.longValue());
             case Long i -> testIntegerLiteral(expr, i);
-            case String s -> testIdentifier(expr, s);
+            case String s when expr instanceof IdentifierExpression -> testIdentifier(expr, s);
+            case String s when expr instanceof StringLiteralExpression -> testStringLiteral(expr, s);
             case Boolean b -> testBooleanLiteral(expr, b);
             default ->  throw new AssertionError("Type of exp not handled. got=" + expected.getClass().getSimpleName());
         }
@@ -250,6 +258,64 @@ public class ParserTest {
         testIntegerLiteral(array.elements()[0], 1L);
         testInfixExpression(array.elements()[1], 2, "*", 2);
         testInfixExpression(array.elements()[2], 3, "+", 3);
+    }
+
+
+    private record HashLiteralTestCase(Map<Object, Object> expected, String input) {}
+    @Test
+    public void testParsingHashLiterals() {
+        var tests = List.of(
+                new HashLiteralTestCase(
+                        Map.of("one", 1, "two", 2, "three", 3),
+                        "{\"one\": 1, \"two\": 2, \"three\": 3}"),
+                new HashLiteralTestCase(
+                        Map.of(),
+                        "{}"),
+                new HashLiteralTestCase(
+                        Map.of(1, 100),
+                        "{1: 100}"),
+                new HashLiteralTestCase(
+                        Map.of(true, "assa", false, "false"),
+                        "{true: \"assa\", false: \"false\"}")
+                );
+        for (var test : tests) {
+            var program = buildProgram(test.input);
+
+            Assertions.assertEquals(1, program.statements().length);
+            var stmt = Assertions.assertInstanceOf(ExpressionStatement.class, program.statements()[0]);
+            var hash = Assertions.assertInstanceOf(HashLiteral.class, stmt.expression());
+
+            Assertions.assertEquals(test.expected.entrySet().size(), hash.pairs().size());
+
+            for (int i = 0; i < hash.pairs().size(); i++) {
+                testLiteralExpression(hash.pairs().get(i).key(), test.expected.entrySet().stream().toList().get(i).getKey());
+                testLiteralExpression(hash.pairs().get(i).value(), test.expected.entrySet().stream().toList().get(i).getValue());
+            }
+        }
+    }
+
+    @Test
+    public void testParsingHashLiteralWithExpression() {
+        var tests = List.of(
+                new HashLiteralTestCase(
+                        Map.of(5 - 2, 0 + 1, 10 - 8, 15 / 5),
+                        "{5 - 2: 0 + 1, 10 - 8: 15 / 5}")
+        );
+        for (var test : tests) {
+            var program = buildProgram(test.input);
+
+            Assertions.assertEquals(1, program.statements().length);
+            var stmt = Assertions.assertInstanceOf(ExpressionStatement.class, program.statements()[0]);
+            var hash = Assertions.assertInstanceOf(HashLiteral.class, stmt.expression());
+
+            Assertions.assertEquals(test.expected.entrySet().size(), hash.pairs().size());
+
+            testInfixExpression(hash.pairs().get(0).key(), 5, "-", 2);
+            testInfixExpression(hash.pairs().get(0).value(), 0, "+", 1);
+
+            testInfixExpression(hash.pairs().get(1).key(), 10, "-", 8);
+            testInfixExpression(hash.pairs().get(1).value(), 15, "/", 5);
+        }
     }
 
     @Test

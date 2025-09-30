@@ -54,6 +54,7 @@ public class Lexer {
             case '<' -> tok = TokenType.LT.token();
             case '>' -> tok = TokenType.GT.token();
             case ';' -> tok = TokenType.SEMICOLON.token();
+            case ':' -> tok = TokenType.COLON.token();
             case '(' -> tok = TokenType.LPAREN.token();
             case ')' -> tok = TokenType.RPAREN.token();
             case ',' -> tok = TokenType.COMMA.token();
