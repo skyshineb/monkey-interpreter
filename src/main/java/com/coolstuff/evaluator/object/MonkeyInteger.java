@@ -1,6 +1,9 @@
 package com.coolstuff.evaluator.object;
 
-public class MonkeyInteger extends MonkeyObject<Long> {
+import com.coolstuff.evaluator.HashKey;
+import com.coolstuff.evaluator.MonkeyHashable;
+
+public class MonkeyInteger extends MonkeyObject<Long> implements MonkeyHashable {
 
     public MonkeyInteger(long value) {
         super(ObjectType.INTEGER);
@@ -10,5 +13,10 @@ public class MonkeyInteger extends MonkeyObject<Long> {
     @Override
     public String inspect() {
         return String.valueOf(getObject());
+    }
+
+    @Override
+    public HashKey hashKey() {
+        return new HashKey(this);
     }
 }

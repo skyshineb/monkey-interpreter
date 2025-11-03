@@ -1,6 +1,9 @@
 package com.coolstuff.evaluator.object;
 
-public class MonkeyBoolean extends MonkeyObject<Boolean> {
+import com.coolstuff.evaluator.HashKey;
+import com.coolstuff.evaluator.MonkeyHashable;
+
+public class MonkeyBoolean extends MonkeyObject<Boolean> implements MonkeyHashable {
 
     public final static MonkeyBoolean TRUE = new MonkeyBoolean(true);
     public final static MonkeyBoolean FALSE = new MonkeyBoolean(false);
@@ -17,5 +20,10 @@ public class MonkeyBoolean extends MonkeyObject<Boolean> {
     @Override
     public String inspect() {
         return String.valueOf(getObject());
+    }
+
+    @Override
+    public HashKey hashKey() {
+        return new HashKey(this);
     }
 }

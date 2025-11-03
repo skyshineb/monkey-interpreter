@@ -7,9 +7,7 @@ import com.coolstuff.ast.Nodes.LetStatement;
 import com.coolstuff.ast.Nodes.ReturnStatement;
 import com.coolstuff.evaluator.object.*;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 
 public class Evaluator {
@@ -42,8 +40,20 @@ public class Evaluator {
             case StringLiteralExpression stringLiteral -> new MonkeyString(stringLiteral.value());
             case ArrayLiteral arrayLiteral -> new MonkeyArray(List.of(evalExpressions(arrayLiteral.elements())));
             case IndexExpression indexExpression -> evalIndexExpression(indexExpression);
+            case HashLiteral hashLiteral -> evalHashLiteral(hashLiteral);
             default -> throw new EvaluationException("Unexpected value: " + node);
         };
+    }
+
+    private MonkeyObject<?> evalHashLiteral(HashLiteral literal) throws EvaluationException {
+        Map<HashKey, MonkeyObject<?>> map = new HashMap<>();
+        for (var pair : literal.pairs()) {
+            var key = eval(pair.key());
+            var value = eval(pair.value());
+
+            map.put(new HashKey(key), value);
+        }
+        return new MonkeyHash(map);
     }
 
     private MonkeyObject<?> evalIndexExpression(IndexExpression node) throws EvaluationException {
@@ -56,6 +66,15 @@ public class Evaluator {
                 }
                 yield array.getObject().get(index.getObject().intValue());
 
+            }
+            case MonkeyHash hash -> {
+                var key = eval(node.index());
+                MonkeyHashable.checkIsHashable(key);
+                var res = hash.getObject().get(key);
+                if (res == null) {
+                    yield MonkeyNull.INSTANCE;
+                }
+                yield res;
             }
             default -> throw new EvaluationException("Index operator not supported for %s", left.getType());
         };

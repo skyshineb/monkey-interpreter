@@ -2,13 +2,16 @@ package com.coolstuff;
 
 import com.coolstuff.evaluator.EvaluationException;
 import com.coolstuff.evaluator.Evaluator;
+import com.coolstuff.evaluator.HashKey;
 import com.coolstuff.evaluator.object.*;
 import com.coolstuff.lexer.Lexer;
 import com.coolstuff.parser.Parser;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 public class EvaluatorTest {
 
@@ -348,6 +351,74 @@ public class EvaluatorTest {
                 Assertions.assertEquals(test.expected, e.getMessage());
             }
 
+        }
+    }
+
+    @Test
+    public void testStringHashKey() {
+        var hello1 = new MonkeyString("Hello world");
+        var hello2 = new MonkeyString("Hello world");
+        var diff1 = new MonkeyString("My name is johnny");
+        var diff2 = new MonkeyString("My name is johnny");
+
+        Assertions.assertEquals(hello1.hashKey(), hello2.hashKey());
+        Assertions.assertEquals(diff1.hashKey(), diff2.hashKey());
+        Assertions.assertNotEquals(hello1.hashKey(), diff1.hashKey());
+    }
+
+    @Test
+    public void testHashLiterals() throws EvaluationException {
+        var test = "let two = \"two\";\n" +
+                "{\n" +
+                "\"one\": 10 - 9,\n" +
+                "two: 1 + 1,\n" +
+                "\"thr\" + \"ee\": 6 / 2,\n" +
+                "4: 4,\n" +
+                "true: 5,\n" +
+                "false: 6\n" +
+                "}";
+        var evaluated = testEval(test);
+        var hashObj = Assertions.assertInstanceOf(MonkeyHash.class, evaluated);
+        var expected = Map.of(
+                new HashKey(new MonkeyString("one")), 1L,
+                new HashKey(new MonkeyString("two")), 2L,
+                new HashKey(new MonkeyString("three")), 3L,
+                new HashKey(new MonkeyInteger(4L)), 4L,
+                new HashKey(new MonkeyBoolean(true)), 5L,
+                new HashKey(new MonkeyBoolean(false)), 6L
+        );
+       for (var entry : expected.entrySet()) {
+           Assertions.assertTrue(hashObj.getObject().containsKey(entry.getKey()), "Map not contain expected key: " + entry.getKey());
+           testObject(hashObj.getObject().get(entry.getKey()), entry.getValue());
+       }
+    }
+
+    private record HashIndexExpressionTestCase(String input, Object expected) {}
+    @Test
+    public void testHashIndexExpression() throws EvaluationException {
+        var tests = List.of(
+                new HashIndexExpressionTestCase("{\"foo\": 5}[\"foo\"]", 5L),
+                new HashIndexExpressionTestCase("{\"foo\": 5}[\"bar\"]", null),
+                new HashIndexExpressionTestCase("let key = \"foo\"; {\"foo\": 5}[key]", 5L),
+                new HashIndexExpressionTestCase("{}[\"foo\"]", null),
+                new HashIndexExpressionTestCase("{5: 5}[5]", 5L),
+                new HashIndexExpressionTestCase("{true: 5}[true]", 5L),
+                new HashIndexExpressionTestCase("{false: 5}[false]", 5L)
+        );
+
+        for (var test : tests) {
+            var evaluated = testEval(test.input);
+            testObject(evaluated, test.expected);
+        }
+    }
+
+    @Test
+    public void testHashErrorHandling() {
+        var test = "{\"name\": \"Monkey\"}[fn(x) { x }];";
+        try {
+            var evaluated = testEval(test);
+        } catch (EvaluationException e ) {
+            Assertions.assertEquals("Error evaluating the program: Index to an hash must be an Expression that yields an Int, String or Boolean", e.getMessage());
         }
     }
 
