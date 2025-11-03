@@ -1,7 +1,7 @@
 # Monkey programming language in Java
 _Based on [interpreterbook.com](https://interpreterbook.com)_
 
-The base version of interpreter is WIP.
+The base version of interpreter is done.
 
 ### Features of Monkey:
 - C-like syntax  
@@ -16,15 +16,15 @@ The base version of interpreter is WIP.
 - a hash data structure  
 
 #### Progress:
-| Feature    | Status              | When       |  
-|------------|---------------------|------------|  
-| Lexing     | done ⭐              | 14.01.2024 |
-| Parsing    | done ⭐              | 26.07.2024 |
-| Evaluation | done ⭐              | 04.04.2025 |
-| Extension  | in progress(p. 180) |            |
+| Feature    | Status  | When       |  
+|------------|---------|------------|  
+| Lexing     | done ⭐  | 14.01.2024 |
+| Parsing    | done ⭐  | 26.07.2024 |
+| Evaluation | done ⭐  | 04.04.2025 |
+| Extension  | done ⭐  | 03.11.2025 |
 
 
 #### To-Do:
+- Make REPL more user-friendly
 - Full unicode support in syntax
-- Make some benchmarking
-- Compiling to JVM bytecode
+- Show on which token the error happened

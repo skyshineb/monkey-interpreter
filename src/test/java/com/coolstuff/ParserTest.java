@@ -9,9 +9,7 @@ import com.coolstuff.parser.Parser;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 public class ParserTest {
 
@@ -287,9 +285,25 @@ public class ParserTest {
 
             Assertions.assertEquals(test.expected.entrySet().size(), hash.pairs().size());
 
-            for (int i = 0; i < hash.pairs().size(); i++) {
-                testLiteralExpression(hash.pairs().get(i).key(), test.expected.entrySet().stream().toList().get(i).getKey());
-                testLiteralExpression(hash.pairs().get(i).value(), test.expected.entrySet().stream().toList().get(i).getValue());
+            var remaining = new ArrayList<>(hash.pairs());
+
+            for (var exp : test.expected.entrySet()) {
+                boolean matched = false;
+
+                for (int j = 0; j < remaining.size(); j++) {
+                    var pair = remaining.get(j);
+                    try {
+                        testLiteralExpression(pair.key(), exp.getKey());
+                        testLiteralExpression(pair.value(), exp.getValue());
+                        remaining.remove(j);
+                        matched = true;
+                        break;
+                    } catch (AssertionError ignore) {
+                        // Not this pair; keep looking
+                    }
+                }
+
+                Assertions.assertTrue(matched, "Expected key not found: " + exp.getKey());
             }
         }
     }

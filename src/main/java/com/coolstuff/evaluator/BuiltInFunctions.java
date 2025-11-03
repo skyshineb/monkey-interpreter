@@ -65,6 +65,13 @@ public enum BuiltInFunctions {
         copy.add(arguments.get(1));
 
         return new MonkeyArray(copy);
+    }),
+
+    PUTS("puts", (callToken, arguments) -> {
+        for (var arg : arguments) {
+            System.out.println(arg.inspect());
+        }
+        return MonkeyNull.INSTANCE;
     });
 
     private final String identifier;
