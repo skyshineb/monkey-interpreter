@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.util.NoSuchElementException;
@@ -58,6 +60,22 @@ public class REPLTest {
         Assertions.assertTrue(output.contains("Identifier not found: a"));
     }
 
+
+    @Test
+    public void multilineIfElseIsEvaluatedAsSingleUnit() {
+        var output = runSession("""
+                if (5 < 10) {
+                return true;
+                } else {
+                return false;
+                }
+                """);
+
+        Assertions.assertTrue(output.contains("true"));
+        Assertions.assertFalse(output.contains("Woops! We ran into some monkey business here!"));
+        Assertions.assertTrue(output.contains(".. "));
+    }
+
     @Test
     public void testStartKeepsInteractiveBehaviorAndThrowsOnEof() {
         byte[] input = "1 + 2\n".getBytes(StandardCharsets.UTF_8);
@@ -74,6 +92,25 @@ public class REPLTest {
         Assertions.assertTrue(output.contains("3"));
     }
 
+    @Test
+    public void testStartPrintsPromptBeforeReadingInput() throws Exception {
+        PipedOutputStream writer = new PipedOutputStream();
+        PipedInputStream in = new PipedInputStream(writer);
+        ByteArrayOutputStream outputBuffer = new ByteArrayOutputStream();
+        PrintStream out = new PrintStream(outputBuffer, true, StandardCharsets.UTF_8);
+
+        REPL repl = new REPL(in, out);
+        Thread replThread = Thread.ofVirtual().start(() -> Assertions.assertThrows(NoSuchElementException.class, repl::start));
+
+        waitUntilOutputContains(outputBuffer, ">> ");
+        writer.write("1 + 2\n".getBytes(StandardCharsets.UTF_8));
+        writer.close();
+        replThread.join();
+
+        String output = outputBuffer.toString(StandardCharsets.UTF_8);
+        Assertions.assertTrue(output.contains(">> 3"));
+    }
+
     private String runSession(String input) {
         byte[] bytes = input.getBytes(StandardCharsets.UTF_8);
         ByteArrayInputStream in = new ByteArrayInputStream(bytes);
@@ -84,5 +121,17 @@ public class REPLTest {
         repl.runUntilEof();
 
         return outputBuffer.toString(StandardCharsets.UTF_8);
+    }
+
+    private void waitUntilOutputContains(ByteArrayOutputStream outputBuffer, String expectedText) throws InterruptedException {
+        for (int attempts = 0; attempts < 50; attempts++) {
+            String output = outputBuffer.toString(StandardCharsets.UTF_8);
+            if (output.contains(expectedText)) {
+                return;
+            }
+            Thread.sleep(10);
+        }
+
+        Assertions.fail("Expected output to contain: " + expectedText);
     }
 }
