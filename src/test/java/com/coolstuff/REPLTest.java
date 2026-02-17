@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.Flushable;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.PrintStream;
@@ -111,6 +112,18 @@ public class REPLTest {
         Assertions.assertTrue(output.contains(">> 3"));
     }
 
+    @Test
+    public void runUntilEofFlushesPromptOutputImmediately() {
+        var out = new FlushTrackingAppendable();
+        var scanner = new java.util.Scanner(new ByteArrayInputStream("1 + 2\n".getBytes(StandardCharsets.UTF_8)));
+        var repl = new REPL(scanner, out);
+
+        repl.runUntilEof();
+
+        Assertions.assertTrue(out.flushCount > 0, "Expected REPL to flush output after appending text");
+        Assertions.assertTrue(out.toString().contains(">> "));
+    }
+
     private String runSession(String input) {
         byte[] bytes = input.getBytes(StandardCharsets.UTF_8);
         ByteArrayInputStream in = new ByteArrayInputStream(bytes);
@@ -133,5 +146,38 @@ public class REPLTest {
         }
 
         Assertions.fail("Expected output to contain: " + expectedText);
+    }
+
+    private static class FlushTrackingAppendable implements Appendable, Flushable {
+        private final StringBuilder buffer = new StringBuilder();
+        private int flushCount;
+
+        @Override
+        public Appendable append(CharSequence csq) {
+            buffer.append(csq);
+            return this;
+        }
+
+        @Override
+        public Appendable append(CharSequence csq, int start, int end) {
+            buffer.append(csq, start, end);
+            return this;
+        }
+
+        @Override
+        public Appendable append(char c) {
+            buffer.append(c);
+            return this;
+        }
+
+        @Override
+        public void flush() {
+            flushCount++;
+        }
+
+        @Override
+        public String toString() {
+            return buffer.toString();
+        }
     }
 }

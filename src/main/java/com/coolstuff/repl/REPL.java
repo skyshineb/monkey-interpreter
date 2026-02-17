@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.io.UncheckedIOException;
+import java.io.Flushable;
 import java.util.List;
 import java.util.Scanner;
 
@@ -185,6 +186,9 @@ public class REPL {
     private void append(String text) {
         try {
             out.append(text);
+            if (out instanceof Flushable flushable) {
+                flushable.flush();
+            }
         } catch (IOException exc) {
             throw new UncheckedIOException(exc);
         }
