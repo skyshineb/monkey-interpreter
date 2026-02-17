@@ -33,18 +33,24 @@ class InputAccumulator {
                 case '}' -> {
                     if (openBraces > 0) {
                         openBraces--;
+                    } else {
+                        return true;
                     }
                 }
                 case '(' -> openParentheses++;
                 case ')' -> {
                     if (openParentheses > 0) {
                         openParentheses--;
+                    } else {
+                        return true;
                     }
                 }
                 case '[' -> openBrackets++;
                 case ']' -> {
                     if (openBrackets > 0) {
                         openBrackets--;
+                    } else {
+                        return true;
                     }
                 }
                 default -> {

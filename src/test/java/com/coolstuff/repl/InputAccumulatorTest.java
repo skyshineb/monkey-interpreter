@@ -26,4 +26,14 @@ class InputAccumulatorTest {
     void handlesEscapedQuotesInsideString() {
         Assertions.assertTrue(inputAccumulator.isInputComplete("let quote = \"He said: \\\"hi\\\"\";"));
     }
+
+    @Test
+    void unmatchedClosingDelimiterCompletesInputImmediately() {
+        Assertions.assertTrue(inputAccumulator.isInputComplete("){"));
+    }
+
+    @Test
+    void unmatchedClosingDelimiterInsideStringDoesNotCompleteInput() {
+        Assertions.assertFalse(inputAccumulator.isInputComplete("let a = \"}\" + {"));
+    }
 }
