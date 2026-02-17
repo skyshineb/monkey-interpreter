@@ -103,13 +103,19 @@ public class REPLTest {
         Thread replThread = Thread.ofVirtual().start(() -> Assertions.assertThrows(NoSuchElementException.class, repl::start));
 
         waitUntilOutputContains(outputBuffer, ">> ");
-        writer.write("1 + 2\n".getBytes(StandardCharsets.UTF_8));
+        writer.write("if (5 < 10) {\n".getBytes(StandardCharsets.UTF_8));
+        writer.flush();
+
+        waitUntilOutputContains(outputBuffer, ".. ");
+        writer.write("return true;\n}\n".getBytes(StandardCharsets.UTF_8));
         writer.close();
         replThread.join();
 
         String output = outputBuffer.toString(StandardCharsets.UTF_8);
-        Assertions.assertTrue(output.contains(">> 3"));
+        Assertions.assertTrue(output.contains(".. "));
+        Assertions.assertTrue(output.contains("true"));
     }
+
 
     @Test
     public void multilinePastedInputDoesNotPrintContinuationPrompt() {
@@ -153,6 +159,34 @@ public class REPLTest {
         String output = outputBuffer.toString(StandardCharsets.UTF_8);
         Assertions.assertTrue(output.contains(".. "));
         Assertions.assertTrue(output.contains("true"));
+    }
+
+
+    @Test
+    public void incompleteInputDoesNotPrintParseErrorBeforeCompletion() throws Exception {
+        PipedOutputStream writer = new PipedOutputStream();
+        PipedInputStream in = new PipedInputStream(writer);
+        ByteArrayOutputStream outputBuffer = new ByteArrayOutputStream();
+        PrintStream out = new PrintStream(outputBuffer, true, StandardCharsets.UTF_8);
+
+        REPL repl = new REPL(in, out);
+        Thread replThread = Thread.ofVirtual().start(() -> Assertions.assertThrows(NoSuchElementException.class, repl::start));
+
+        waitUntilOutputContains(outputBuffer, ">> ");
+        writer.write("if (5 < 10) {\n".getBytes(StandardCharsets.UTF_8));
+        writer.flush();
+
+        waitUntilOutputContains(outputBuffer, ".. ");
+        String outputAfterFirstLine = outputBuffer.toString(StandardCharsets.UTF_8);
+        Assertions.assertFalse(outputAfterFirstLine.contains("Woops! We ran into some monkey business here!"));
+
+        writer.write("5;\n}\n".getBytes(StandardCharsets.UTF_8));
+        writer.close();
+        replThread.join();
+
+        String output = outputBuffer.toString(StandardCharsets.UTF_8);
+        Assertions.assertFalse(output.contains("Woops! We ran into some monkey business here!"));
+        Assertions.assertTrue(output.contains("5"));
     }
 
     private String runSession(String input) {
