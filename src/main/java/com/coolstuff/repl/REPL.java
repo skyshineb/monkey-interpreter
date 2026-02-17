@@ -7,8 +7,10 @@ import com.coolstuff.evaluator.object.MonkeyObject;
 import com.coolstuff.lexer.Lexer;
 import com.coolstuff.parser.Parser;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.Scanner;
 
@@ -29,7 +31,7 @@ public class REPL {
     final String PROMPT = ">> ";
 
     private final Scanner scanner;
-    private final PrintStream out;
+    private final Appendable out;
 
     public REPL() {
         this(System.in, System.out);
@@ -39,14 +41,18 @@ public class REPL {
         this(new Scanner(input), out);
     }
 
-    public REPL(Scanner scanner, PrintStream out) {
+    public REPL(Readable input, Appendable out) {
+        this(new Scanner(input), out);
+    }
+
+    public REPL(Scanner scanner, Appendable out) {
         this.scanner = scanner;
         this.out = out;
     }
 
     public void start() {
         while (true) {
-            out.printf(PROMPT);
+            print(PROMPT);
             String input = scanner.nextLine();
             evaluateInput(input);
         }
@@ -54,7 +60,7 @@ public class REPL {
 
     public void runUntilEof() {
         while (scanner.hasNextLine()) {
-            out.printf(PROMPT);
+            print(PROMPT);
             String input = scanner.nextLine();
 
             if (isSessionTerminationCommand(input)) {
@@ -80,18 +86,34 @@ public class REPL {
         }
         try {
             MonkeyObject<?> evaluated = e.eval(program);
-            out.println(evaluated.inspect());
+            println(evaluated.inspect());
 
         } catch (EvaluationException exc) {
-            out.println(exc.getMessage());
+            println(exc.getMessage());
         }
     }
 
     private void printParseErrors(List<String> errors) {
-        out.printf("%s\n", MONKEY_FACE);
-        out.printf("Woops! We ran into some monkey business here!\n");
+        println(MONKEY_FACE);
+        println("Woops! We ran into some monkey business here!");
         for (String err : errors) {
-            out.printf("\t%s\n", err);
+            println("\t" + err);
+        }
+    }
+
+    private void print(String text) {
+        append(text);
+    }
+
+    private void println(String text) {
+        append(text + "\n");
+    }
+
+    private void append(String text) {
+        try {
+            out.append(text);
+        } catch (IOException exc) {
+            throw new UncheckedIOException(exc);
         }
     }
 }
