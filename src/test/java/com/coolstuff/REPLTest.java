@@ -73,7 +73,7 @@ public class REPLTest {
 
         Assertions.assertTrue(output.contains("true"));
         Assertions.assertFalse(output.contains("Woops! We ran into some monkey business here!"));
-        Assertions.assertTrue(output.contains(".. "));
+        Assertions.assertFalse(output.contains(".. "));
     }
 
     @Test
@@ -111,6 +111,50 @@ public class REPLTest {
         Assertions.assertTrue(output.contains(">> 3"));
     }
 
+    @Test
+    public void multilinePastedInputDoesNotPrintContinuationPrompt() {
+        var output = runSession("""
+                let range = fn(start, end) {
+                 let iter = fn(curr, acc) {
+                   if (curr > end) {
+                     acc;
+                   } else {
+                     iter(curr + 1, push(acc, curr));
+                   }
+                 };
+                 iter(start, []);
+               };
+               range(1,3);
+                """);
+
+        Assertions.assertFalse(output.contains(".. "));
+        Assertions.assertTrue(output.contains("[1, 2, 3]"));
+    }
+
+    @Test
+    public void lineByLineInputShowsContinuationPrompt() throws Exception {
+        PipedOutputStream writer = new PipedOutputStream();
+        PipedInputStream in = new PipedInputStream(writer);
+        ByteArrayOutputStream outputBuffer = new ByteArrayOutputStream();
+        PrintStream out = new PrintStream(outputBuffer, true, StandardCharsets.UTF_8);
+
+        REPL repl = new REPL(in, out);
+        Thread replThread = Thread.ofVirtual().start(() -> Assertions.assertThrows(NoSuchElementException.class, repl::start));
+
+        waitUntilOutputContains(outputBuffer, ">> ");
+        writer.write("if (5 < 10) {\n".getBytes(StandardCharsets.UTF_8));
+        writer.flush();
+
+        waitUntilOutputContains(outputBuffer, ".. ");
+        writer.write("return true;\n}\n".getBytes(StandardCharsets.UTF_8));
+        writer.close();
+        replThread.join();
+
+        String output = outputBuffer.toString(StandardCharsets.UTF_8);
+        Assertions.assertTrue(output.contains(".. "));
+        Assertions.assertTrue(output.contains("true"));
+    }
+
     private String runSession(String input) {
         byte[] bytes = input.getBytes(StandardCharsets.UTF_8);
         ByteArrayInputStream in = new ByteArrayInputStream(bytes);
@@ -134,4 +178,5 @@ public class REPLTest {
 
         Assertions.fail("Expected output to contain: " + expectedText);
     }
+
 }
