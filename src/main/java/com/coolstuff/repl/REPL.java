@@ -29,6 +29,7 @@ public class REPL {
                            '~---~'
             """;
     final String PROMPT = ">> ";
+    final String SECONDARY_PROMPT = ".. ";
 
     private final Scanner scanner;
     private final Appendable out;
@@ -50,28 +51,102 @@ public class REPL {
     }
 
     public void start() {
+        var inputBuffer = new StringBuilder();
         while (true) {
-            print(PROMPT);
-            String input = scanner.nextLine();
-            evaluateInput(input);
+            readAndEvaluateInputLine(inputBuffer, scanner.nextLine(), false);
         }
     }
 
     public void runUntilEof() {
-        while (scanner.hasNextLine()) {
-            print(PROMPT);
-            String input = scanner.nextLine();
+        var inputBuffer = new StringBuilder();
 
-            if (isSessionTerminationCommand(input)) {
+        while (scanner.hasNextLine()) {
+            var input = scanner.nextLine();
+            if (readAndEvaluateInputLine(inputBuffer, input, true)) {
                 break;
             }
-
-            evaluateInput(input);
         }
+    }
+
+    private boolean readAndEvaluateInputLine(StringBuilder inputBuffer, String inputLine, boolean stopOnSessionTerminationCommand) {
+        print(inputBuffer.isEmpty() ? PROMPT : SECONDARY_PROMPT);
+
+        if (stopOnSessionTerminationCommand && inputBuffer.isEmpty() && isSessionTerminationCommand(inputLine)) {
+            return true;
+        }
+
+        if (!inputBuffer.isEmpty()) {
+            inputBuffer.append('\n');
+        }
+        inputBuffer.append(inputLine);
+
+        if (!isInputComplete(inputBuffer.toString())) {
+            return false;
+        }
+
+        evaluateInput(inputBuffer.toString());
+        inputBuffer.setLength(0);
+        return false;
     }
 
     private boolean isSessionTerminationCommand(String input) {
         return ":quit".equals(input) || ":exit".equals(input);
+    }
+
+    private boolean isInputComplete(String input) {
+        int openBraces = 0;
+        int openParentheses = 0;
+        int openBrackets = 0;
+        boolean inString = false;
+        boolean escaped = false;
+
+        for (char currentChar : input.toCharArray()) {
+            if (inString) {
+                if (escaped) {
+                    escaped = false;
+                    continue;
+                }
+
+                if (currentChar == '\\') {
+                    escaped = true;
+                    continue;
+                }
+
+                if (currentChar == '"') {
+                    inString = false;
+                }
+                continue;
+            }
+
+            switch (currentChar) {
+                case '"' -> inString = true;
+                case '{' -> openBraces++;
+                case '}' -> {
+                    if (openBraces == 0) {
+                        return true;
+                    }
+                    openBraces--;
+                }
+                case '(' -> openParentheses++;
+                case ')' -> {
+                    if (openParentheses == 0) {
+                        return true;
+                    }
+                    openParentheses--;
+                }
+                case '[' -> openBrackets++;
+                case ']' -> {
+                    if (openBrackets == 0) {
+                        return true;
+                    }
+                    openBrackets--;
+                }
+                default -> {
+                }
+            }
+        }
+
+        return !inString && openBraces == 0 && openParentheses == 0 && openBrackets == 0;
     }
 
     private void evaluateInput(String input) {

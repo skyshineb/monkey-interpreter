@@ -58,6 +58,22 @@ public class REPLTest {
         Assertions.assertTrue(output.contains("Identifier not found: a"));
     }
 
+
+    @Test
+    public void multilineIfElseIsEvaluatedAsSingleUnit() {
+        var output = runSession("""
+                if (5 < 10) {
+                return true;
+                } else {
+                return false;
+                }
+                """);
+
+        Assertions.assertTrue(output.contains("true"));
+        Assertions.assertFalse(output.contains("Woops! We ran into some monkey business here!"));
+        Assertions.assertTrue(output.contains(".. "));
+    }
+
     @Test
     public void testStartKeepsInteractiveBehaviorAndThrowsOnEof() {
         byte[] input = "1 + 2\n".getBytes(StandardCharsets.UTF_8);
