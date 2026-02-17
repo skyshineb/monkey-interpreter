@@ -189,6 +189,41 @@ public class REPLTest {
         Assertions.assertTrue(output.contains("5"));
     }
 
+    @Test
+    public void parseErrorShownAfterCompleteMultilineInput() throws Exception {
+        PipedOutputStream writer = new PipedOutputStream();
+        PipedInputStream in = new PipedInputStream(writer);
+        ByteArrayOutputStream outputBuffer = new ByteArrayOutputStream();
+        PrintStream out = new PrintStream(outputBuffer, true, StandardCharsets.UTF_8);
+
+        REPL repl = new REPL(in, out);
+        Thread replThread = Thread.ofVirtual().start(() -> Assertions.assertThrows(NoSuchElementException.class, repl::start));
+
+        waitUntilOutputContains(outputBuffer, ">> ");
+        writer.write("if (true) {\n".getBytes(StandardCharsets.UTF_8));
+        writer.flush();
+        waitUntilOutputContains(outputBuffer, ".. ");
+
+        String outputBeforeCompletion = outputBuffer.toString(StandardCharsets.UTF_8);
+        Assertions.assertFalse(outputBeforeCompletion.contains("Woops! We ran into some monkey business here!"));
+
+        writer.write("let value = ;\n}\n".getBytes(StandardCharsets.UTF_8));
+        writer.close();
+        replThread.join();
+
+        String output = outputBuffer.toString(StandardCharsets.UTF_8);
+        Assertions.assertEquals(1, countOccurrences(output, "Woops! We ran into some monkey business here!"));
+        Assertions.assertTrue(output.contains("no prefix parse function for ; found"));
+    }
+
+    @Test
+    public void evaluationErrorDoesNotBreakSession() {
+        var output = runSession("5 + true;\n10;\n");
+
+        Assertions.assertTrue(output.contains("Error evaluating the program: Operation + not supported for types INTEGER and BOOLEAN"));
+        Assertions.assertTrue(output.contains("10"));
+    }
+
     private String runSession(String input) {
         byte[] bytes = input.getBytes(StandardCharsets.UTF_8);
         ByteArrayInputStream in = new ByteArrayInputStream(bytes);
@@ -211,6 +246,16 @@ public class REPLTest {
         }
 
         Assertions.fail("Expected output to contain: " + expectedText);
+    }
+
+    private int countOccurrences(String text, String value) {
+        var count = 0;
+        var index = 0;
+        while ((index = text.indexOf(value, index)) != -1) {
+            count++;
+            index += value.length();
+        }
+        return count;
     }
 
 }
