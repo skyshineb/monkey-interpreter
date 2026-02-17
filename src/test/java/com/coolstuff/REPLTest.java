@@ -44,6 +44,21 @@ public class REPLTest {
     }
 
     @Test
+    public void stateIsPreservedAcrossInputs() {
+        var output = runSession("let a = 5;\nlet b = a;\nb;\n");
+
+        Assertions.assertTrue(output.contains("5"));
+    }
+
+    @Test
+    public void sessionsAreIsolatedFromEachOther() {
+        runSession("let a = 5;\n");
+        var output = runSession("a;\n");
+
+        Assertions.assertTrue(output.contains("Identifier not found: a"));
+    }
+
+    @Test
     public void testStartKeepsInteractiveBehaviorAndThrowsOnEof() {
         byte[] input = "1 + 2\n".getBytes(StandardCharsets.UTF_8);
         ByteArrayInputStream in = new ByteArrayInputStream(input);
