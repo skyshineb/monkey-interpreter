@@ -9,9 +9,13 @@ import com.coolstuff.parser.Parser;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.UncheckedIOException;
+import java.io.BufferedReader;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Scanner;
 
 public class REPL {
@@ -29,8 +33,11 @@ public class REPL {
                            '~---~'
             """;
     final String PROMPT = ">> ";
+    final String SECONDARY_PROMPT = ".. ";
 
     private final Scanner scanner;
+    private final BufferedReader inputReader;
+    private final InputStream sourceInput;
     private final Appendable out;
     private final Evaluator evaluator;
 
@@ -39,12 +46,18 @@ public class REPL {
     }
 
     public REPL(InputStream input, PrintStream out) {
-        this(new Scanner(input), out);
+        this.scanner = null;
+        this.inputReader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8));
+        this.sourceInput = input;
+        this.out = out;
+        this.evaluator = new Evaluator();
     }
 
 
     public REPL(Scanner scanner, Appendable out) {
         this.scanner = scanner;
+        this.inputReader = null;
+        this.sourceInput = null;
         this.out = out;
         this.evaluator = new Evaluator();
     }
@@ -53,27 +66,81 @@ public class REPL {
         var inputBuffer = new StringBuilder();
         print(PROMPT);
         while (true) {
-            readAndEvaluateInputLine(inputBuffer, scanner.nextLine(), false);
+            readAndEvaluateInputLine(inputBuffer, readLineOrThrow(), false);
             if (inputBuffer.isEmpty()) {
                 print(PROMPT);
+            } else if (shouldPrintSecondaryPrompt()) {
+                print(SECONDARY_PROMPT);
             }
         }
     }
 
     public void runUntilEof() {
         var inputBuffer = new StringBuilder();
-        if (scanner.hasNextLine()) {
-            print(PROMPT);
+        var input = readLineForRunUntilEof();
+        if (input == null) {
+            return;
         }
 
-        while (scanner.hasNextLine()) {
-            var input = scanner.nextLine();
+        print(PROMPT);
+        while (input != null) {
             if (readAndEvaluateInputLine(inputBuffer, input, true)) {
                 break;
             }
             if (inputBuffer.isEmpty()) {
                 print(PROMPT);
+            } else if (shouldPrintSecondaryPrompt()) {
+                print(SECONDARY_PROMPT);
             }
+            input = readLineForRunUntilEof();
+        }
+    }
+
+    private String readLineOrThrow() {
+        if (scanner != null) {
+            return scanner.nextLine();
+        }
+
+        try {
+            String line = inputReader.readLine();
+            if (line == null) {
+                throw new NoSuchElementException();
+            }
+            return line;
+        } catch (IOException exc) {
+            throw new UncheckedIOException(exc);
+        }
+    }
+
+    private String readLineForRunUntilEof() {
+        if (scanner != null) {
+            return scanner.hasNextLine() ? scanner.nextLine() : null;
+        }
+
+        try {
+            return inputReader.readLine();
+        } catch (IOException exc) {
+            throw new UncheckedIOException(exc);
+        }
+    }
+
+    private boolean shouldPrintSecondaryPrompt() {
+        if (inputReader != null) {
+            try {
+                return !inputReader.ready();
+            } catch (IOException exc) {
+                return true;
+            }
+        }
+
+        if (sourceInput == null) {
+            return true;
+        }
+
+        try {
+            return sourceInput.available() == 0;
+        } catch (IOException exc) {
+            return true;
         }
     }
 
