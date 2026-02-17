@@ -40,6 +40,7 @@ public class REPL {
     private final InputStream sourceInput;
     private final Appendable out;
     private final Evaluator evaluator;
+    private final InputAccumulator inputAccumulator;
 
     public REPL() {
         this(System.in, System.out);
@@ -51,6 +52,7 @@ public class REPL {
         this.sourceInput = input;
         this.out = out;
         this.evaluator = new Evaluator();
+        this.inputAccumulator = new InputAccumulator();
     }
 
 
@@ -60,6 +62,7 @@ public class REPL {
         this.sourceInput = null;
         this.out = out;
         this.evaluator = new Evaluator();
+        this.inputAccumulator = new InputAccumulator();
     }
 
     public void start() {
@@ -154,7 +157,7 @@ public class REPL {
         }
         inputBuffer.append(inputLine);
 
-        if (!isInputComplete(inputBuffer.toString())) {
+        if (!inputAccumulator.isInputComplete(inputBuffer.toString())) {
             return false;
         }
 
@@ -165,62 +168,6 @@ public class REPL {
 
     private boolean isSessionTerminationCommand(String input) {
         return ":quit".equals(input) || ":exit".equals(input);
-    }
-
-    private boolean isInputComplete(String input) {
-        int openBraces = 0;
-        int openParentheses = 0;
-        int openBrackets = 0;
-        boolean inString = false;
-        boolean escaped = false;
-
-        for (char currentChar : input.toCharArray()) {
-            if (inString) {
-                if (escaped) {
-                    escaped = false;
-                    continue;
-                }
-
-                if (currentChar == '\\') {
-                    escaped = true;
-                    continue;
-                }
-
-                if (currentChar == '"') {
-                    inString = false;
-                }
-                continue;
-            }
-
-            switch (currentChar) {
-                case '"' -> inString = true;
-                case '{' -> openBraces++;
-                case '}' -> {
-                    if (openBraces == 0) {
-                        return true;
-                    }
-                    openBraces--;
-                }
-                case '(' -> openParentheses++;
-                case ')' -> {
-                    if (openParentheses == 0) {
-                        return true;
-                    }
-                    openParentheses--;
-                }
-                case '[' -> openBrackets++;
-                case ']' -> {
-                    if (openBrackets == 0) {
-                        return true;
-                    }
-                    openBrackets--;
-                }
-                default -> {
-                }
-            }
-        }
-
-        return !inString && openBraces == 0 && openParentheses == 0 && openBrackets == 0;
     }
 
     private void evaluateInput(String input) {
