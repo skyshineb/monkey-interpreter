@@ -41,9 +41,6 @@ public class REPL {
         this(new Scanner(input), out);
     }
 
-    public REPL(Readable input, Appendable out) {
-        this(new Scanner(input), out);
-    }
 
     public REPL(Scanner scanner, Appendable out) {
         this.scanner = scanner;
