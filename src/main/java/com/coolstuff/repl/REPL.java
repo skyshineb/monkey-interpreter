@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.io.UncheckedIOException;
-import java.io.Flushable;
 import java.util.List;
 import java.util.Scanner;
 
@@ -30,7 +29,6 @@ public class REPL {
                            '~---~'
             """;
     final String PROMPT = ">> ";
-    final String SECONDARY_PROMPT = ".. ";
 
     private final Scanner scanner;
     private final Appendable out;
@@ -53,20 +51,28 @@ public class REPL {
 
     public void start() {
         var inputBuffer = new StringBuilder();
+        print(PROMPT);
         while (true) {
-            print(inputBuffer.isEmpty() ? PROMPT : SECONDARY_PROMPT);
             readAndEvaluateInputLine(inputBuffer, scanner.nextLine(), false);
+            if (inputBuffer.isEmpty()) {
+                print(PROMPT);
+            }
         }
     }
 
     public void runUntilEof() {
         var inputBuffer = new StringBuilder();
+        if (scanner.hasNextLine()) {
+            print(PROMPT);
+        }
 
         while (scanner.hasNextLine()) {
-            print(inputBuffer.isEmpty() ? PROMPT : SECONDARY_PROMPT);
             var input = scanner.nextLine();
             if (readAndEvaluateInputLine(inputBuffer, input, true)) {
                 break;
+            }
+            if (inputBuffer.isEmpty()) {
+                print(PROMPT);
             }
         }
     }
@@ -186,9 +192,6 @@ public class REPL {
     private void append(String text) {
         try {
             out.append(text);
-            if (out instanceof Flushable flushable) {
-                flushable.flush();
-            }
         } catch (IOException exc) {
             throw new UncheckedIOException(exc);
         }

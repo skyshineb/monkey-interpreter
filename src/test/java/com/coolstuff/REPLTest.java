@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.Flushable;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.PrintStream;
@@ -74,7 +73,7 @@ public class REPLTest {
 
         Assertions.assertTrue(output.contains("true"));
         Assertions.assertFalse(output.contains("Woops! We ran into some monkey business here!"));
-        Assertions.assertTrue(output.contains(".. "));
+        Assertions.assertFalse(output.contains(".. "));
     }
 
     @Test
@@ -113,15 +112,20 @@ public class REPLTest {
     }
 
     @Test
-    public void runUntilEofFlushesPromptOutputImmediately() {
-        var out = new FlushTrackingAppendable();
-        var scanner = new java.util.Scanner(new ByteArrayInputStream("1 + 2\n".getBytes(StandardCharsets.UTF_8)));
-        var repl = new REPL(scanner, out);
+    public void multilinePastedInputDoesNotPrintContinuationPrompt() {
+        var output = runSession("""
+                let iter = fn(curr, end, acc) {
+                  if (curr > end) {
+                    acc;
+                  } else {
+                    iter(curr + 1, end, push(acc, curr));
+                  }
+                };
+                iter(1, 3, []);
+                """);
 
-        repl.runUntilEof();
-
-        Assertions.assertTrue(out.flushCount > 0, "Expected REPL to flush output after appending text");
-        Assertions.assertTrue(out.toString().contains(">> "));
+        Assertions.assertFalse(output.contains(".. "));
+        Assertions.assertTrue(output.contains("[1, 2, 3]"));
     }
 
     private String runSession(String input) {
@@ -148,36 +152,4 @@ public class REPLTest {
         Assertions.fail("Expected output to contain: " + expectedText);
     }
 
-    private static class FlushTrackingAppendable implements Appendable, Flushable {
-        private final StringBuilder buffer = new StringBuilder();
-        private int flushCount;
-
-        @Override
-        public Appendable append(CharSequence csq) {
-            buffer.append(csq);
-            return this;
-        }
-
-        @Override
-        public Appendable append(CharSequence csq, int start, int end) {
-            buffer.append(csq, start, end);
-            return this;
-        }
-
-        @Override
-        public Appendable append(char c) {
-            buffer.append(c);
-            return this;
-        }
-
-        @Override
-        public void flush() {
-            flushCount++;
-        }
-
-        @Override
-        public String toString() {
-            return buffer.toString();
-        }
-    }
 }
