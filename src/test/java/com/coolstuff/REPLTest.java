@@ -77,6 +77,40 @@ public class REPLTest {
     }
 
     @Test
+    public void mixedEndToEndFlowHandlesErrorsAndRecovers() {
+        var output = runSession("""
+                let threshold = 10;
+                let value = 8;
+                if (value < threshold) {
+                value + 1;
+                } else {
+                value - 1;
+                }
+                unknown + 1;
+                let recovered = threshold + value;
+                recovered;
+                """);
+
+        Assertions.assertTrue(output.contains("9"));
+        Assertions.assertTrue(output.contains("Identifier not found: unknown"));
+        Assertions.assertTrue(output.contains("18"));
+    }
+
+    @Test
+    public void testStartAcceptsServiceCommandTermination() {
+        byte[] input = ":exit\n".getBytes(StandardCharsets.UTF_8);
+        ByteArrayInputStream in = new ByteArrayInputStream(input);
+        ByteArrayOutputStream outputBuffer = new ByteArrayOutputStream();
+        PrintStream out = new PrintStream(outputBuffer, true, StandardCharsets.UTF_8);
+
+        REPL repl = new REPL(in, out);
+        repl.start();
+
+        String output = normalizeLineEndings(outputBuffer.toString(StandardCharsets.UTF_8));
+        Assertions.assertEquals(">> ", output);
+    }
+
+    @Test
     public void testStartKeepsInteractiveBehaviorAndThrowsOnEof() {
         byte[] input = "1 + 2\n".getBytes(StandardCharsets.UTF_8);
         ByteArrayInputStream in = new ByteArrayInputStream(input);
@@ -87,7 +121,7 @@ public class REPLTest {
 
         Assertions.assertThrows(NoSuchElementException.class, repl::start);
 
-        String output = outputBuffer.toString(StandardCharsets.UTF_8);
+        String output = normalizeLineEndings(outputBuffer.toString(StandardCharsets.UTF_8));
         Assertions.assertTrue(output.contains(">> "));
         Assertions.assertTrue(output.contains("3"));
     }
@@ -111,7 +145,7 @@ public class REPLTest {
         writer.close();
         replThread.join();
 
-        String output = outputBuffer.toString(StandardCharsets.UTF_8);
+        String output = normalizeLineEndings(outputBuffer.toString(StandardCharsets.UTF_8));
         Assertions.assertTrue(output.contains(".. "));
         Assertions.assertTrue(output.contains("true"));
     }
@@ -156,7 +190,7 @@ public class REPLTest {
         writer.close();
         replThread.join();
 
-        String output = outputBuffer.toString(StandardCharsets.UTF_8);
+        String output = normalizeLineEndings(outputBuffer.toString(StandardCharsets.UTF_8));
         Assertions.assertTrue(output.contains(".. "));
         Assertions.assertTrue(output.contains("true"));
     }
@@ -177,14 +211,14 @@ public class REPLTest {
         writer.flush();
 
         waitUntilOutputContains(outputBuffer, ".. ");
-        String outputAfterFirstLine = outputBuffer.toString(StandardCharsets.UTF_8);
+        String outputAfterFirstLine = normalizeLineEndings(outputBuffer.toString(StandardCharsets.UTF_8));
         Assertions.assertFalse(outputAfterFirstLine.contains("Woops! We ran into some monkey business here!"));
 
         writer.write("5;\n}\n".getBytes(StandardCharsets.UTF_8));
         writer.close();
         replThread.join();
 
-        String output = outputBuffer.toString(StandardCharsets.UTF_8);
+        String output = normalizeLineEndings(outputBuffer.toString(StandardCharsets.UTF_8));
         Assertions.assertFalse(output.contains("Woops! We ran into some monkey business here!"));
         Assertions.assertTrue(output.contains("5"));
     }
@@ -204,14 +238,14 @@ public class REPLTest {
         writer.flush();
         waitUntilOutputContains(outputBuffer, ".. ");
 
-        String outputBeforeCompletion = outputBuffer.toString(StandardCharsets.UTF_8);
+        String outputBeforeCompletion = normalizeLineEndings(outputBuffer.toString(StandardCharsets.UTF_8));
         Assertions.assertFalse(outputBeforeCompletion.contains("Woops! We ran into some monkey business here!"));
 
         writer.write("let value = ;\n}\n".getBytes(StandardCharsets.UTF_8));
         writer.close();
         replThread.join();
 
-        String output = outputBuffer.toString(StandardCharsets.UTF_8);
+        String output = normalizeLineEndings(outputBuffer.toString(StandardCharsets.UTF_8));
         Assertions.assertEquals(1, countOccurrences(output, "Woops! We ran into some monkey business here!"));
         Assertions.assertTrue(output.contains("no prefix parse function for ; found"));
     }
@@ -233,12 +267,12 @@ public class REPLTest {
         REPL repl = new REPL(in, out);
         repl.runUntilEof();
 
-        return outputBuffer.toString(StandardCharsets.UTF_8);
+        return normalizeLineEndings(outputBuffer.toString(StandardCharsets.UTF_8));
     }
 
     private void waitUntilOutputContains(ByteArrayOutputStream outputBuffer, String expectedText) throws InterruptedException {
         for (int attempts = 0; attempts < 50; attempts++) {
-            String output = outputBuffer.toString(StandardCharsets.UTF_8);
+            String output = normalizeLineEndings(outputBuffer.toString(StandardCharsets.UTF_8));
             if (output.contains(expectedText)) {
                 return;
             }
@@ -256,6 +290,10 @@ public class REPLTest {
             index += value.length();
         }
         return count;
+    }
+
+    private String normalizeLineEndings(String text) {
+        return text.replace("\r\n", "\n");
     }
 
 }

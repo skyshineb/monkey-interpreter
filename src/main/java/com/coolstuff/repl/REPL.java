@@ -69,7 +69,9 @@ public class REPL {
         var inputBuffer = new StringBuilder();
         print(PROMPT);
         while (true) {
-            readAndEvaluateInputLine(inputBuffer, readLineOrThrow(), false);
+            if (readAndEvaluateInputLine(inputBuffer, readLineOrThrow(), true)) {
+                return;
+            }
             if (inputBuffer.isEmpty()) {
                 print(PROMPT);
             } else if (shouldPrintSecondaryPrompt()) {
