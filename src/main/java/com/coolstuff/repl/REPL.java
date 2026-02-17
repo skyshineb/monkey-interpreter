@@ -53,6 +53,7 @@ public class REPL {
     public void start() {
         var inputBuffer = new StringBuilder();
         while (true) {
+            print(inputBuffer.isEmpty() ? PROMPT : SECONDARY_PROMPT);
             readAndEvaluateInputLine(inputBuffer, scanner.nextLine(), false);
         }
     }
@@ -61,6 +62,7 @@ public class REPL {
         var inputBuffer = new StringBuilder();
 
         while (scanner.hasNextLine()) {
+            print(inputBuffer.isEmpty() ? PROMPT : SECONDARY_PROMPT);
             var input = scanner.nextLine();
             if (readAndEvaluateInputLine(inputBuffer, input, true)) {
                 break;
@@ -69,8 +71,6 @@ public class REPL {
     }
 
     private boolean readAndEvaluateInputLine(StringBuilder inputBuffer, String inputLine, boolean stopOnSessionTerminationCommand) {
-        print(inputBuffer.isEmpty() ? PROMPT : SECONDARY_PROMPT);
-
         if (stopOnSessionTerminationCommand && inputBuffer.isEmpty() && isSessionTerminationCommand(inputLine)) {
             return true;
         }
