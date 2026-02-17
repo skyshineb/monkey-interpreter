@@ -57,4 +57,11 @@ Run from the project root:
 
 #### To-Do:
 - Full unicode support in syntax
-- Show on which token the error happened
+- Syntax enrichment:
+  - Comments
+  - '>=', '<=' conditionals
+  - else if
+- Loops: while, break, continue
+- Better runtime errors + line/col
+- Better debugging: REPL :tokens, :ast
+- Stdlib module system / built-ins cleanup

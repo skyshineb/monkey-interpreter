@@ -98,6 +98,5 @@ Run commands from repository root.
 - For parser/evaluator edits, validate both successful evaluation and failure cases.
 
 ## Known TODOs (from README)
-- Improve REPL UX.
 - Improve Unicode support in syntax handling.
 - Improve parse error context (e.g., token/location details).
