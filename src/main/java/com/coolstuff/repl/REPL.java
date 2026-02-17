@@ -32,6 +32,7 @@ public class REPL {
 
     private final Scanner scanner;
     private final Appendable out;
+    private final Evaluator evaluator;
 
     public REPL() {
         this(System.in, System.out);
@@ -45,6 +46,7 @@ public class REPL {
     public REPL(Scanner scanner, Appendable out) {
         this.scanner = scanner;
         this.out = out;
+        this.evaluator = new Evaluator();
     }
 
     public void start() {
@@ -75,14 +77,13 @@ public class REPL {
     private void evaluateInput(String input) {
         Lexer l = new Lexer(input);
         Parser p = new Parser(l);
-        Evaluator e = new Evaluator();
         Program program = p.parseProgram();
         if (!p.getErrors().isEmpty()) {
             printParseErrors(p.getErrors());
             return;
         }
         try {
-            MonkeyObject<?> evaluated = e.eval(program);
+            MonkeyObject<?> evaluated = evaluator.eval(program);
             println(evaluated.inspect());
 
         } catch (EvaluationException exc) {
