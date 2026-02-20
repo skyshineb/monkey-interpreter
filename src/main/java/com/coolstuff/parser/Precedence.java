@@ -16,7 +16,7 @@ public enum Precedence {
         return switch (type) {
             case LPAREN -> Precedence.CALL;
             case EQ, NOT_EQ -> Precedence.EQUALS;
-            case LT, GT -> Precedence.LESS_GREATER;
+            case LT, GT, LTE, GTE -> Precedence.LESS_GREATER;
             case PLUS, MINUS -> Precedence.SUM;
             case ASTERISK, SLASH -> Precedence.PRODUCT;
             case LBRACKET -> Precedence.INDEX;

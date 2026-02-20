@@ -371,7 +371,7 @@ public class Parser {
 
     private ParserFunction<Expression, Expression> infixParseFn(TokenType type) {
         return switch (type) {
-            case PLUS, MINUS, SLASH, ASTERISK, EQ, NOT_EQ, LT, GT -> this::parseInfixExpression;
+            case PLUS, MINUS, SLASH, ASTERISK, EQ, NOT_EQ, LT, GT, LTE, GTE -> this::parseInfixExpression;
             case LPAREN -> this::parseCallExpression;
             case LBRACKET -> this::parseIndexExpression;
             default -> null;

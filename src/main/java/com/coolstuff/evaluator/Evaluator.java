@@ -188,6 +188,8 @@ public class Evaluator {
             }
             case LT -> MonkeyBoolean.nativeToMonkey(left.getObject() < right.getObject());
             case GT -> MonkeyBoolean.nativeToMonkey(left.getObject() > right.getObject());
+            case LTE -> MonkeyBoolean.nativeToMonkey(left.getObject() <= right.getObject());
+            case GTE -> MonkeyBoolean.nativeToMonkey(left.getObject() >= right.getObject());
             case EQ -> MonkeyBoolean.nativeToMonkey(left.getObject().equals(right.getObject()));
             case NOT_EQ -> MonkeyBoolean.nativeToMonkey(!left.getObject().equals(right.getObject()));
             // should be unreachable

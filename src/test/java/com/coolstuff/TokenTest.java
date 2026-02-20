@@ -53,6 +53,8 @@ public class TokenTest {
                 
                 10 == 10;
                 10 != 9;
+                10 <= 10;
+                10 >= 9;
                 "foobar"
                 "foo bar"
                 [1, 2];
@@ -131,6 +133,14 @@ public class TokenTest {
                 new Token(TokenType.SEMICOLON, ";"),
                 new Token(TokenType.INT, "10"),
                 new Token(TokenType.NOT_EQ, "!="),
+                new Token(TokenType.INT, "9"),
+                new Token(TokenType.SEMICOLON, ";"),
+                new Token(TokenType.INT, "10"),
+                new Token(TokenType.LTE, "<="),
+                new Token(TokenType.INT, "10"),
+                new Token(TokenType.SEMICOLON, ";"),
+                new Token(TokenType.INT, "10"),
+                new Token(TokenType.GTE, ">="),
                 new Token(TokenType.INT, "9"),
                 new Token(TokenType.SEMICOLON, ";"),
                 new Token(TokenType.STRING, "foobar"),
