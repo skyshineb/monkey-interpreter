@@ -510,6 +510,27 @@ public class ParserTest {
         testIdentifier(alternative.expression(), "y");
     }
 
+
+    @Test
+    public void testIfElseIfExpression() {
+        var input = "if (a) { x } else if (b) { y }";
+        var program = buildProgram(input);
+
+        Assertions.assertEquals(1, program.statements().length);
+        var stmt = Assertions.assertInstanceOf(ExpressionStatement.class, program.statements()[0]);
+
+        var ifExpr = Assertions.assertInstanceOf(IfExpression.class, stmt.expression());
+        testIdentifier(ifExpr.condition(), "a");
+
+        Assertions.assertNotNull(ifExpr.alternative());
+        Assertions.assertEquals(1, ifExpr.alternative().statements().length);
+
+        var alternativeStatement = Assertions.assertInstanceOf(ExpressionStatement.class, ifExpr.alternative().statements()[0]);
+        var nestedIf = Assertions.assertInstanceOf(IfExpression.class, alternativeStatement.expression());
+
+        testIdentifier(nestedIf.condition(), "b");
+    }
+
     @Test
     public void testCallExpression() {
         var input = "add(1, 2 * 3, 4 + 5);";
