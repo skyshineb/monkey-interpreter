@@ -24,6 +24,8 @@ public enum TokenType {
     GTE(">="),
     EQ("=="),
     NOT_EQ("!="),
+    AND("&&"),
+    OR("||"),
 
     // delimeters
     COMMA(","),

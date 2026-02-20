@@ -70,7 +70,11 @@ public class EvaluatorTest {
             new EvalBooleanTestCase("(1 < 2) == true", true),
             new EvalBooleanTestCase("(1 < 2) == false", false),
             new EvalBooleanTestCase("(1 > 2) == true", false),
-            new EvalBooleanTestCase("(1 > 2) == false", true)
+            new EvalBooleanTestCase("(1 > 2) == false", true),
+            new EvalBooleanTestCase("true && true", true),
+            new EvalBooleanTestCase("true && false", false),
+            new EvalBooleanTestCase("false || true", true),
+            new EvalBooleanTestCase("false || false", false)
         );
 
         for (var test : tests) {
@@ -85,6 +89,19 @@ public class EvaluatorTest {
         var evaluator = new Evaluator();
 
         return evaluator.eval(p.parseProgram());
+    }
+
+    @Test
+    public void testShortCircuitBooleanExpressions() throws EvaluationException {
+        var tests = List.of(
+                new EvalBooleanTestCase("false && (1 / 0 > 0)", false),
+                new EvalBooleanTestCase("true || (1 / 0 > 0)", true)
+        );
+
+        for (var test : tests) {
+            var evaluated = testEval(test.input);
+            testBooleanObject(evaluated, test.expected);
+        }
     }
 
     @Test

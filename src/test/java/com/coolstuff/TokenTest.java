@@ -55,6 +55,10 @@ public class TokenTest {
                 10 != 9;
                 10 <= 10;
                 10 >= 9;
+                true && false;
+                true || false;
+                &
+                |
                 "foobar"
                 "foo bar"
                 [1, 2];
@@ -143,6 +147,16 @@ public class TokenTest {
                 new Token(TokenType.GTE, ">="),
                 new Token(TokenType.INT, "9"),
                 new Token(TokenType.SEMICOLON, ";"),
+                new Token(TokenType.TRUE, "true"),
+                new Token(TokenType.AND, "&&"),
+                new Token(TokenType.FALSE, "false"),
+                new Token(TokenType.SEMICOLON, ";"),
+                new Token(TokenType.TRUE, "true"),
+                new Token(TokenType.OR, "||"),
+                new Token(TokenType.FALSE, "false"),
+                new Token(TokenType.SEMICOLON, ";"),
+                new Token(TokenType.ILLEGAL, "&"),
+                new Token(TokenType.ILLEGAL, "|"),
                 new Token(TokenType.STRING, "foobar"),
                 new Token(TokenType.STRING, "foo bar"),
                 new Token(TokenType.LBRACKET, "["),

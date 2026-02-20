@@ -150,6 +150,26 @@ public class Evaluator {
 
     private MonkeyObject<?> evalInfixExpression(InfixExpression infixExpression) throws EvaluationException {
         var left = eval(infixExpression.left());
+
+        switch (infixExpression.token().type()) {
+            case AND -> {
+                if (!isTruth(left)) {
+                    return MonkeyBoolean.FALSE;
+                }
+
+                var right = eval(infixExpression.right());
+                return MonkeyBoolean.nativeToMonkey(isTruth(right));
+            }
+            case OR -> {
+                if (isTruth(left)) {
+                    return MonkeyBoolean.TRUE;
+                }
+
+                var right = eval(infixExpression.right());
+                return MonkeyBoolean.nativeToMonkey(isTruth(right));
+            }
+        }
+
         var right = eval(infixExpression.right());
 
         if (left.getType() == ObjectType.INTEGER && right.getType() == ObjectType.INTEGER) {
