@@ -178,6 +178,14 @@ public class EvaluatorTest {
     }
 
     @Test
+    public void testWhileLoopContinueDoesNotLeakControlSignal() throws EvaluationException {
+        var input = "let i = 0; while (i < 1) { let i = i + 1; continue; } 99;";
+
+        var evaluated = testEval(input);
+        testIntegerObject(evaluated, 99L);
+    }
+
+    @Test
     public void testWhileLoopBreak() throws EvaluationException {
         var input = "let i = 0; while (i < 10) { let i = i + 1; if (i == 4) { break; } } i;";
 

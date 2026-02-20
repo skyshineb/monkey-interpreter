@@ -168,6 +168,7 @@ public class Evaluator {
                 }
 
                 if (result instanceof MonkeyContinue) {
+                    result = MonkeyNull.INSTANCE;
                     continue;
                 }
 
