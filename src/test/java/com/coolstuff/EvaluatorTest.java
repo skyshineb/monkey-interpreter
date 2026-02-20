@@ -132,7 +132,11 @@ public class EvaluatorTest {
                 new IfElseExpressionTestCase("if (1 < 2) { 10 }", 10L),
                 new IfElseExpressionTestCase("if (1 > 2) { 10 }", null),
                 new IfElseExpressionTestCase("if (1 > 2) { 10 } else { 20 }", 20L),
-                new IfElseExpressionTestCase("if (1 < 2) { 10 } else { 20 }", 10L)
+                new IfElseExpressionTestCase("if (1 < 2) { 10 } else { 20 }", 10L),
+                new IfElseExpressionTestCase("if (false) { 1 } else if (true) { 2 }", 2L),
+                new IfElseExpressionTestCase("if (false) {1} else if (false) {2} else {3}", 3L),
+                new IfElseExpressionTestCase("if (true) {1} else if (true) {2} else {3}", 1L),
+                new IfElseExpressionTestCase("if (false) {1} else if (false) {2} else if (true) {3} else if (false) {4} else {5}", 3L)
         );
 
         for (var test : tests) {

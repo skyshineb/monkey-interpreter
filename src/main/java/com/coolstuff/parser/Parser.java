@@ -308,11 +308,23 @@ public class Parser {
         BlockStatement alternative = null;
         if (peekTokenIs(TokenType.ELSE)) {
             nextToken();
-            if (!expectPeek(TokenType.LBRACE)) {
-                return null;
-            }
 
-            alternative = parseBlockStatement();
+            if (peekTokenIs(TokenType.IF)) {
+                nextToken();
+                var elseIfExpression = (IfExpression) parseIfExpression();
+                if (elseIfExpression == null) {
+                    return null;
+                }
+
+                var elseIfStatement = new ExpressionStatement(elseIfExpression.token(), elseIfExpression);
+                alternative = new BlockStatement(elseIfExpression.token(), new Statement[]{elseIfStatement});
+            } else {
+                if (!expectPeek(TokenType.LBRACE)) {
+                    return null;
+                }
+
+                alternative = parseBlockStatement();
+            }
         }
 
         return new IfExpression(token, condition, consequence, alternative);
