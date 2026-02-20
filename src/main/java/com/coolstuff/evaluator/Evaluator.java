@@ -1,29 +1,42 @@
 package com.coolstuff.evaluator;
 
 import com.coolstuff.ast.*;
-import com.coolstuff.ast.Nodes.BlockStatement;
-import com.coolstuff.ast.Nodes.BreakStatement;
-import com.coolstuff.ast.Nodes.ContinueStatement;
-import com.coolstuff.ast.Nodes.ExpressionStatement;
-import com.coolstuff.ast.Nodes.LetStatement;
-import com.coolstuff.ast.Nodes.ReturnStatement;
-import com.coolstuff.ast.Nodes.WhileStatement;
+import com.coolstuff.ast.Nodes.*;
 import com.coolstuff.evaluator.object.*;
+import com.coolstuff.token.SourcePosition;
+import com.coolstuff.token.Token;
 
 import java.util.*;
-
 
 public class Evaluator {
 
     private final Environment environment;
+    private final Deque<StackFrame> callStack;
     private int loopDepth = 0;
 
     public Evaluator() {
-        this.environment = new Environment();
+        this(new Environment(), new ArrayDeque<>());
     }
 
     public Evaluator(Environment environment) {
+        this(environment, new ArrayDeque<>());
+    }
+
+    private Evaluator(Environment environment, Deque<StackFrame> callStack) {
         this.environment = environment;
+        this.callStack = callStack;
+    }
+
+    public Evaluator child(Environment env) {
+        return new Evaluator(env, callStack);
+    }
+
+    public EvaluationException error(RuntimeErrorType type, Token token, String message, Object... args) {
+        return EvaluationException.from(type, token.position(), snapshotStack(), message, args);
+    }
+
+    private List<StackFrame> snapshotStack() {
+        return callStack.stream().toList();
     }
 
     public MonkeyObject<?> eval(Node node) throws EvaluationException {
@@ -46,9 +59,9 @@ public class Evaluator {
             case IndexExpression indexExpression -> evalIndexExpression(indexExpression);
             case HashLiteral hashLiteral -> evalHashLiteral(hashLiteral);
             case WhileStatement whileStatement -> evalWhileStatement(whileStatement);
-            case BreakStatement ignored -> evalBreakStatement();
-            case ContinueStatement ignored -> evalContinueStatement();
-            default -> throw new EvaluationException("Unexpected value: " + node);
+            case BreakStatement breakStatement -> evalBreakStatement(breakStatement);
+            case ContinueStatement continueStatement -> evalContinueStatement(continueStatement);
+            default -> throw EvaluationException.from(RuntimeErrorType.UNSUPPORTED_OPERATION, SourcePosition.UNKNOWN, snapshotStack(), "Unexpected value: %s", node);
         };
     }
 
@@ -67,7 +80,7 @@ public class Evaluator {
         var left = eval(node.left());
         return switch (left) {
             case MonkeyArray array -> {
-                var index = MonkeyArray.verifyIndexIsInteger(eval(node.index()));
+                var index = MonkeyArray.verifyIndexIsInteger(eval(node.index()), node.token(), this);
                 if (index.getObject() < 0 || index.getObject() >= array.getObject().size()) {
                     yield MonkeyNull.INSTANCE;
                 }
@@ -76,26 +89,42 @@ public class Evaluator {
             }
             case MonkeyHash hash -> {
                 var key = eval(node.index());
-                MonkeyHashable.checkIsHashable(key);
+                MonkeyHashable.checkIsHashable(key, node.token(), this);
                 var res = hash.getObject().get(key);
                 if (res == null) {
                     yield MonkeyNull.INSTANCE;
                 }
                 yield res;
             }
-            default -> throw new EvaluationException("Index operator not supported for %s", left.getType());
+            default -> throw error(RuntimeErrorType.INVALID_INDEX, node.token(), "Index operator not supported for %s", left.getType());
         };
     }
 
     private MonkeyObject<?> evalCallExpression(CallExpression node) throws EvaluationException {
         var function = eval(node.function());
 
-        if (function instanceof AbstractMonkeyFunction functionToCall) {
-            var args = evalExpressions(node.arguments());
-            return functionToCall.getObject().apply(node.token(), Arrays.stream(args).toList());
-        } else {
-            throw new EvaluationException("Not a function: %s", function.inspect());
+        if (!(function instanceof AbstractMonkeyFunction functionToCall)) {
+            throw error(RuntimeErrorType.NOT_CALLABLE, node.token(), "Not a function: %s", function.inspect());
         }
+
+        var args = evalExpressions(node.arguments());
+        var functionName = resolveFunctionName(function, node.function());
+        callStack.push(new StackFrame(functionName, node.token().position(), args.length));
+        try {
+            return functionToCall.getObject().apply(node.token(), Arrays.stream(args).toList(), this);
+        } finally {
+            callStack.pop();
+        }
+    }
+
+    private String resolveFunctionName(MonkeyObject<?> function, Expression functionExpr) {
+        if (function instanceof BuiltInFunction builtInFunction) {
+            return builtInFunction.getName();
+        }
+        if (functionExpr instanceof IdentifierExpression ident) {
+            return ident.value();
+        }
+        return "<anonymous>";
     }
 
     private MonkeyObject<?>[] evalExpressions(Expression[] expressions) throws EvaluationException {
@@ -116,8 +145,6 @@ public class Evaluator {
     }
 
     private MonkeyObject<?> evalFunction(FunctionLiteral functionLiteral) {
-        var params = functionLiteral.parameters();
-        var body = functionLiteral.body();
         return new MonkeyFunction(environment, functionLiteral);
     }
 
@@ -126,7 +153,7 @@ public class Evaluator {
 
         if (resolvedValue.isEmpty()) {
             return BuiltInFunctions.getFunction(identifierExpression.value()).orElseThrow(() ->
-                    new EvaluationException("Identifier not found: %s", identifierExpression.value()));
+                    error(RuntimeErrorType.UNKNOWN_IDENTIFIER, identifierExpression.token(), "Identifier not found: %s", identifierExpression.value()));
         }
 
         return resolvedValue.get();
@@ -183,17 +210,17 @@ public class Evaluator {
         return result;
     }
 
-    private MonkeyObject<?> evalBreakStatement() throws EvaluationException {
+    private MonkeyObject<?> evalBreakStatement(BreakStatement statement) throws EvaluationException {
         if (loopDepth == 0) {
-            throw new EvaluationException("`break` not allowed outside loop");
+            throw error(RuntimeErrorType.INVALID_CONTROL_FLOW, statement.token(), "`break` not allowed outside loop");
         }
 
         return MonkeyBreak.INSTANCE;
     }
 
-    private MonkeyObject<?> evalContinueStatement() throws EvaluationException {
+    private MonkeyObject<?> evalContinueStatement(ContinueStatement statement) throws EvaluationException {
         if (loopDepth == 0) {
-            throw new EvaluationException("`continue` not allowed outside loop");
+            throw error(RuntimeErrorType.INVALID_CONTROL_FLOW, statement.token(), "`continue` not allowed outside loop");
         }
 
         return MonkeyContinue.INSTANCE;
@@ -238,12 +265,7 @@ public class Evaluator {
             }
         }
 
-        throw new EvaluationException(
-                "Operation %s not supported for types %s and %s",
-                infixExpression.token().token(),
-                left.getType(),
-                right.getType()
-        );
+        throw error(RuntimeErrorType.TYPE_MISMATCH, infixExpression.token(), "Operation %s not supported for types %s and %s", infixExpression.token().token(), left.getType(), right.getType());
     }
 
     private MonkeyObject<?> evalIntegerInfixExpression(MonkeyInteger left, MonkeyInteger right, InfixExpression infixExpression) throws EvaluationException {
@@ -253,7 +275,7 @@ public class Evaluator {
             case ASTERISK -> new MonkeyInteger(left.getObject() * right.getObject());
             case SLASH -> {
                 if (right.getObject().equals(0L)) {
-                    throw new EvaluationException("Cannot divide by 0!");
+                    throw error(RuntimeErrorType.DIVISION_BY_ZERO, infixExpression.token(), "Cannot divide by 0!");
                 }
                 yield new MonkeyInteger(left.getObject() / right.getObject());
             }
@@ -263,7 +285,6 @@ public class Evaluator {
             case GTE -> MonkeyBoolean.nativeToMonkey(left.getObject() >= right.getObject());
             case EQ -> MonkeyBoolean.nativeToMonkey(left.getObject().equals(right.getObject()));
             case NOT_EQ -> MonkeyBoolean.nativeToMonkey(!left.getObject().equals(right.getObject()));
-            // should be unreachable
             default -> throw new IllegalStateException("Evaluation BUG: Unexpected value(unreachable code): " + infixExpression.token().token());
         };
     }
@@ -271,12 +292,7 @@ public class Evaluator {
     private MonkeyObject<?> evalStringInfixExpression(MonkeyString left, MonkeyString right, InfixExpression infixExpression) throws EvaluationException {
         return switch (infixExpression.token().type()) {
             case PLUS -> new MonkeyString(left.getObject() + right.getObject());
-            default -> throw new EvaluationException(
-                    "Operation %s not supported for types %s and %s",
-                    infixExpression.token().token(),
-                    left.getType(),
-                    right.getType()
-            );
+            default -> throw error(RuntimeErrorType.UNSUPPORTED_OPERATION, infixExpression.token(), "Operation %s not supported for types %s and %s", infixExpression.token().token(), left.getType(), right.getType());
         };
     }
 
@@ -294,10 +310,8 @@ public class Evaluator {
                     yield nullInstance;
                 }
 
-                throw new EvaluationException(String.format("Operation - not supported for type %s", expressionResult.getType().name()));
-
+                throw error(RuntimeErrorType.TYPE_MISMATCH, prefixExpression.token(), "Operation - not supported for type %s", expressionResult.getType().name());
             }
-            // should be unreachable
             default -> throw new IllegalStateException("Evaluation BUG: Unexpected value(unreachable code): " + prefixExpression.token().token());
         };
     }

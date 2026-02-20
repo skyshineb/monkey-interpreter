@@ -1,12 +1,22 @@
 package com.coolstuff.evaluator;
 
+import com.coolstuff.token.SourcePosition;
+
+import java.util.List;
+
 public class EvaluationException extends Exception {
-    public EvaluationException(String message, Object... args) {
-        super(buildMessage(message, args));
+    private final RuntimeError runtimeError;
+
+    public EvaluationException(RuntimeError runtimeError) {
+        super(runtimeError.formatSingleLine());
+        this.runtimeError = runtimeError;
     }
 
-    private static String buildMessage(String message, Object... args) {
-        var formattedMessage = message.formatted(args);
-        return "Error evaluating the program: %s".formatted(formattedMessage);
+    public RuntimeError getRuntimeError() {
+        return runtimeError;
+    }
+
+    public static EvaluationException from(RuntimeErrorType type, SourcePosition position, List<StackFrame> stack, String message, Object... args) {
+        return new EvaluationException(new RuntimeError(type, message.formatted(args), position, List.copyOf(stack)));
     }
 }

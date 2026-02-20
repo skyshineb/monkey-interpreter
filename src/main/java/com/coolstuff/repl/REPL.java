@@ -185,7 +185,7 @@ public class REPL {
             println(evaluated.inspect());
 
         } catch (EvaluationException exc) {
-            println(exc.getMessage());
+            println(exc.getRuntimeError().formatMultiline());
         }
     }
 

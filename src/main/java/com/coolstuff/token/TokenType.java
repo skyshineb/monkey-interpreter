@@ -51,25 +51,39 @@ public enum TokenType {
     BREAK("break"),
     CONTINUE("continue");
 
-    private final Token token;
+    private final String literal;
 
     TokenType(String literal) {
-        token = new Token(this, literal);
+        this.literal = literal;
     }
+
     TokenType() {
-        token = null;
+        this.literal = null;
     }
 
     public Token createToken(String literal) {
         return new Token(this, literal);
     }
 
+    public Token createToken(String literal, int line, int column) {
+        return new Token(this, literal, line, column);
+    }
+
     public Token token() {
-        if (token == null) {
+        if (literal == null) {
             throw new IllegalArgumentException(
                     "TokenType %s doesn't have a default Token. Create one using 'createToken'".formatted(this.name())
             );
         }
-        return token;
+        return new Token(this, literal);
+    }
+
+    public Token token(int line, int column) {
+        if (literal == null) {
+            throw new IllegalArgumentException(
+                    "TokenType %s doesn't have a default Token. Create one using 'createToken'".formatted(this.name())
+            );
+        }
+        return new Token(this, literal, line, column);
     }
 }

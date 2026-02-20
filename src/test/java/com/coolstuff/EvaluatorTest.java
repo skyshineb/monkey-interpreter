@@ -3,6 +3,7 @@ package com.coolstuff;
 import com.coolstuff.evaluator.EvaluationException;
 import com.coolstuff.evaluator.Evaluator;
 import com.coolstuff.evaluator.HashKey;
+import com.coolstuff.evaluator.RuntimeErrorType;
 import com.coolstuff.evaluator.object.*;
 import com.coolstuff.lexer.Lexer;
 import com.coolstuff.parser.Parser;
@@ -212,82 +213,68 @@ public class EvaluatorTest {
     @Test
     public void testBreakAndContinueOutsideLoopErrors() {
         var tests = List.of(
-                List.of("break;", "Error evaluating the program: `break` not allowed outside loop"),
-                List.of("continue;", "Error evaluating the program: `continue` not allowed outside loop")
+                List.of("break;", RuntimeErrorType.INVALID_CONTROL_FLOW, "`break` not allowed outside loop"),
+                List.of("continue;", RuntimeErrorType.INVALID_CONTROL_FLOW, "`continue` not allowed outside loop")
         );
 
         for (var test : tests) {
-            EvaluationException exception = null;
-            try {
-                testEval(test.getFirst());
-            } catch (EvaluationException e) {
-                exception = e;
-            }
-
-            Assertions.assertNotNull(exception);
-            Assertions.assertEquals(test.get(1), exception.getMessage());
+            var exception = Assertions.assertThrows(EvaluationException.class, () -> testEval((String) test.getFirst()));
+            Assertions.assertEquals(test.get(1), exception.getRuntimeError().type());
+            Assertions.assertEquals(test.get(2), exception.getRuntimeError().message());
         }
     }
 
     @Test
     public void testErrorHandling() {
         var tests = List.of(
-                List.of(
-                        "5 + true;",
-                        "Error evaluating the program: Operation + not supported for types INTEGER and BOOLEAN"
-                ),
-                List.of(
-                        "5 + true; 5;",
-                        "Error evaluating the program: Operation + not supported for types INTEGER and BOOLEAN"
-                ),
-                List.of(
-                        "-true",
-                        "Error evaluating the program: Operation - not supported for type BOOLEAN"
-                ),
-                List.of(
-                        "true + false;",
-                        "Error evaluating the program: Operation + not supported for types BOOLEAN and BOOLEAN"
-                ),
-                List.of(
-                        "5; true + false; 5",
-                        "Error evaluating the program: Operation + not supported for types BOOLEAN and BOOLEAN"
-                ),
-                List.of(
-                        "if (10 > 1) { true + false; }",
-                        "Error evaluating the program: Operation + not supported for types BOOLEAN and BOOLEAN"
-                ),
-                List.of(
-                        """
+                List.of("5 + true;", RuntimeErrorType.TYPE_MISMATCH, "Operation + not supported for types INTEGER and BOOLEAN"),
+                List.of("5 + true; 5;", RuntimeErrorType.TYPE_MISMATCH, "Operation + not supported for types INTEGER and BOOLEAN"),
+                List.of("-true", RuntimeErrorType.TYPE_MISMATCH, "Operation - not supported for type BOOLEAN"),
+                List.of("true + false;", RuntimeErrorType.TYPE_MISMATCH, "Operation + not supported for types BOOLEAN and BOOLEAN"),
+                List.of("5; true + false; 5", RuntimeErrorType.TYPE_MISMATCH, "Operation + not supported for types BOOLEAN and BOOLEAN"),
+                List.of("if (10 > 1) { true + false; }", RuntimeErrorType.TYPE_MISMATCH, "Operation + not supported for types BOOLEAN and BOOLEAN"),
+                List.of("""
                                 if (10 > 1) {
                                     if (10 > 1) {
                                         return true + false;
                                     }
                                     return 1;
-                                }""",
-                        "Error evaluating the program: Operation + not supported for types BOOLEAN and BOOLEAN"
-                ),
-                List.of(
-                        "foobar",
-                        "Error evaluating the program: Identifier not found: foobar"
-                        ),
-                List.of(
-                        "\"Hello\" - \"World\"",
-                        "Error evaluating the program: Operation - not supported for types STRING and STRING"
-                )
+                                }""", RuntimeErrorType.TYPE_MISMATCH, "Operation + not supported for types BOOLEAN and BOOLEAN"),
+                List.of("foobar", RuntimeErrorType.UNKNOWN_IDENTIFIER, "Identifier not found: foobar"),
+                List.of("\"Hello\" - \"World\"", RuntimeErrorType.UNSUPPORTED_OPERATION, "Operation - not supported for types STRING and STRING")
         );
 
         for (var test : tests) {
-            EvaluationException exception = null;
-            System.out.print(test.getFirst());
-            try {
-                testEval(test.getFirst());
-            } catch (EvaluationException e) {
-                exception = e;
-            }
-            Assertions.assertNotNull(exception);
-            Assertions.assertEquals(test.get(1), exception.getMessage());
-            System.out.println(" ---> OK");
+            var exception = Assertions.assertThrows(EvaluationException.class, () -> testEval((String) test.getFirst()));
+            Assertions.assertEquals(test.get(1), exception.getRuntimeError().type());
+            Assertions.assertEquals(test.get(2), exception.getRuntimeError().message());
         }
+    }
+
+    @Test
+    public void testStructuredErrorsAndStackFrames() {
+        var typeMismatch = Assertions.assertThrows(EvaluationException.class, () -> testEval("5 + true;"));
+        Assertions.assertEquals(RuntimeErrorType.TYPE_MISMATCH, typeMismatch.getRuntimeError().type());
+        Assertions.assertEquals(1, typeMismatch.getRuntimeError().position().line());
+        Assertions.assertEquals(3, typeMismatch.getRuntimeError().position().column());
+
+        var unknownIdentifier = Assertions.assertThrows(EvaluationException.class, () -> testEval("foobar"));
+        Assertions.assertEquals(RuntimeErrorType.UNKNOWN_IDENTIFIER, unknownIdentifier.getRuntimeError().type());
+        Assertions.assertEquals(1, unknownIdentifier.getRuntimeError().position().line());
+        Assertions.assertEquals(1, unknownIdentifier.getRuntimeError().position().column());
+
+        var notCallable = Assertions.assertThrows(EvaluationException.class, () -> testEval("let a = 5; a(1);"));
+        Assertions.assertEquals(RuntimeErrorType.NOT_CALLABLE, notCallable.getRuntimeError().type());
+
+        var invalidHashKey = Assertions.assertThrows(EvaluationException.class, () -> testEval("{\"foo\": 5}[fn(x){x}]") );
+        Assertions.assertEquals(RuntimeErrorType.INVALID_HASH_KEY, invalidHashKey.getRuntimeError().type());
+
+        var breakMisuse = Assertions.assertThrows(EvaluationException.class, () -> testEval("break;"));
+        Assertions.assertEquals(RuntimeErrorType.INVALID_CONTROL_FLOW, breakMisuse.getRuntimeError().type());
+
+        var nested = Assertions.assertThrows(EvaluationException.class, () -> testEval("let c = fn(x){ x + true; }; let b = fn(x){ c(x); }; let a = fn(x){ b(x); }; a(1);"));
+        Assertions.assertEquals(RuntimeErrorType.TYPE_MISMATCH, nested.getRuntimeError().type());
+        Assertions.assertTrue(nested.getRuntimeError().stackFrames().size() >= 3);
     }
 
     private record LetTestCase(String input, Long expected) {}
@@ -376,8 +363,8 @@ public class EvaluatorTest {
                 new BuiltInFunctionsTestCase("len(\"\")", 0L),
                 new BuiltInFunctionsTestCase("len(\"four\")", 4L),
                 new BuiltInFunctionsTestCase("len(\"hello world\")", 11L),
-                new BuiltInFunctionsTestCase("len(1)", "Error evaluating the program: Argument to `len` not supported, got INTEGER"),
-                new BuiltInFunctionsTestCase("len(\"one\", \"two\")", "Error evaluating the program: Wrong number of arguments. Expected 1, got 2"),
+                new BuiltInFunctionsTestCase("len(1)", "Argument to `len` not supported, got INTEGER"),
+                new BuiltInFunctionsTestCase("len(\"one\", \"two\")", "Wrong number of arguments. Expected 1, got 2"),
                 new BuiltInFunctionsTestCase("len([1,2])", 2L),
                 new BuiltInFunctionsTestCase("first([1,2])", 1L),
                 new BuiltInFunctionsTestCase("first([-5,2])", -5L),
@@ -402,7 +389,7 @@ public class EvaluatorTest {
                 var evaluated = testEval(test.input);
                 testObject(evaluated, test.expected);
             } catch (EvaluationException e) {
-                Assertions.assertEquals(test.expected, e.getMessage());
+                Assertions.assertEquals(test.expected, e.getRuntimeError().message());
             }
 
         }
@@ -442,7 +429,7 @@ public class EvaluatorTest {
                 var evaluated = testEval(test.input);
                 testObject(evaluated, test.expected);
             } catch (EvaluationException e) {
-                Assertions.assertEquals(test.expected, e.getMessage());
+                Assertions.assertEquals(test.expected, e.getRuntimeError().message());
             }
 
         }
@@ -512,7 +499,8 @@ public class EvaluatorTest {
         try {
             var evaluated = testEval(test);
         } catch (EvaluationException e ) {
-            Assertions.assertEquals("Error evaluating the program: Index to an hash must be an Expression that yields an Int, String or Boolean", e.getMessage());
+            Assertions.assertEquals(RuntimeErrorType.INVALID_HASH_KEY, e.getRuntimeError().type());
+            Assertions.assertEquals("Index to an hash must be an Expression that yields an Int, String or Boolean", e.getRuntimeError().message());
         }
     }
 
