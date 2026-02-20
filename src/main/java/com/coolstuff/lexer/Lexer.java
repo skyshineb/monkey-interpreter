@@ -49,6 +49,22 @@ public class Lexer {
                     tok = TokenType.BANG.token();
                 }
             }
+            case '&' -> {
+                if (peekChar() == '&') {
+                    readChar();
+                    tok = TokenType.AND.token();
+                } else {
+                    tok = new Token(TokenType.ILLEGAL, Character.toString(ch));
+                }
+            }
+            case '|' -> {
+                if (peekChar() == '|') {
+                    readChar();
+                    tok = TokenType.OR.token();
+                } else {
+                    tok = new Token(TokenType.ILLEGAL, Character.toString(ch));
+                }
+            }
             case '/' -> tok = TokenType.SLASH.token();
             case '*' -> tok = TokenType.ASTERISK.token();
             case '<' -> {
