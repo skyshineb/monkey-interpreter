@@ -51,8 +51,22 @@ public class Lexer {
             }
             case '/' -> tok = TokenType.SLASH.token();
             case '*' -> tok = TokenType.ASTERISK.token();
-            case '<' -> tok = TokenType.LT.token();
-            case '>' -> tok = TokenType.GT.token();
+            case '<' -> {
+                if (peekChar() == '=') {
+                    readChar();
+                    tok = TokenType.LTE.token();
+                } else {
+                    tok = TokenType.LT.token();
+                }
+            }
+            case '>' -> {
+                if (peekChar() == '=') {
+                    readChar();
+                    tok = TokenType.GTE.token();
+                } else {
+                    tok = TokenType.GT.token();
+                }
+            }
             case ';' -> tok = TokenType.SEMICOLON.token();
             case ':' -> tok = TokenType.COLON.token();
             case '(' -> tok = TokenType.LPAREN.token();
