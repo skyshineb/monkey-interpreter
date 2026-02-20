@@ -2,6 +2,7 @@ package com.coolstuff.evaluator;
 
 import com.coolstuff.evaluator.object.MonkeyObject;
 import com.coolstuff.evaluator.object.ObjectType;
+import com.coolstuff.token.Token;
 
 public abstract class AbstractMonkeyFunction extends MonkeyObject<MonkeyFunctionInterface> {
 
@@ -9,15 +10,15 @@ public abstract class AbstractMonkeyFunction extends MonkeyObject<MonkeyFunction
         super(type);
     }
 
-    public static void checkArgumentCount(int expected, int actual) throws EvaluationException {
+    public static void checkArgumentCount(int expected, int actual, Token callToken, Evaluator evaluator) throws EvaluationException {
         if (actual != expected) {
-            throw new EvaluationException("Wrong number of arguments. Expected %d, got %d", expected, actual);
+            throw evaluator.error(RuntimeErrorType.INVALID_ARGUMENT, callToken, "Wrong number of arguments. Expected %d, got %d", expected, actual);
         }
     }
 
-    public static void checkArgumentType(MonkeyObject<?> argument, ObjectType expected, String functionName) throws EvaluationException {
+    public static void checkArgumentType(MonkeyObject<?> argument, ObjectType expected, String functionName, Token callToken, Evaluator evaluator) throws EvaluationException {
         if (argument.getType() != expected) {
-            throw new EvaluationException("Argument to `%s` must be %s, got %s", functionName, expected, argument.getType());
+            throw evaluator.error(RuntimeErrorType.TYPE_MISMATCH, callToken, "Argument to `%s` must be %s, got %s", functionName, expected, argument.getType());
         }
     }
 }

@@ -1,11 +1,8 @@
 package com.coolstuff.evaluator.object;
 
 import com.coolstuff.ast.FunctionLiteral;
-import com.coolstuff.ast.IdentifierExpression;
-import com.coolstuff.ast.Nodes.BlockStatement;
 import com.coolstuff.evaluator.AbstractMonkeyFunction;
 import com.coolstuff.evaluator.Environment;
-import com.coolstuff.evaluator.Evaluator;
 
 import java.util.Arrays;
 
@@ -17,11 +14,11 @@ public class MonkeyFunction extends AbstractMonkeyFunction {
         super(ObjectType.FUNCTION_OBJ);
         this.functionLiteral = functionLiteral;
 
-        setObject(((callToken, arguments) -> {
+        setObject(((callToken, arguments, evaluator) -> {
             var parameters = functionLiteral.parameters();
             var body = functionLiteral.body();
 
-            checkArgumentCount(parameters.length, arguments.size());
+            checkArgumentCount(parameters.length, arguments.size(), callToken, evaluator);
 
             var environment = new Environment(creationEnv);
             for (int i = 0; i < parameters.length; i++) {
@@ -29,8 +26,7 @@ public class MonkeyFunction extends AbstractMonkeyFunction {
                 environment.set(parameter.value(), arguments.get(i));
             }
 
-            var evaluator = new Evaluator(environment);
-            return evaluator.eval(body);
+            return evaluator.child(environment).eval(body);
         }));
     }
 

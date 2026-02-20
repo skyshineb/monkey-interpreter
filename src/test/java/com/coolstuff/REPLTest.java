@@ -34,7 +34,7 @@ public class REPLTest {
     public void testRunUntilEofHandlesEvaluationErrors() {
         var output = runSession("5 + true;\n");
 
-        Assertions.assertTrue(output.contains("Error evaluating the program: Operation + not supported for types INTEGER and BOOLEAN"));
+        Assertions.assertTrue(output.contains("Error[TYPE_MISMATCH] at 1:3: Operation + not supported for types INTEGER and BOOLEAN"));
     }
 
     @Test
@@ -254,8 +254,18 @@ public class REPLTest {
     public void evaluationErrorDoesNotBreakSession() {
         var output = runSession("5 + true;\n10;\n");
 
-        Assertions.assertTrue(output.contains("Error evaluating the program: Operation + not supported for types INTEGER and BOOLEAN"));
+        Assertions.assertTrue(output.contains("Error[TYPE_MISMATCH] at 1:3: Operation + not supported for types INTEGER and BOOLEAN"));
         Assertions.assertTrue(output.contains("10"));
+    }
+
+    @Test
+    public void rendersStructuredRuntimeErrorWithStackTrace() {
+        var output = runSession("let add = fn(x, y) { x + y; }; add(1, true);\n");
+
+        Assertions.assertTrue(output.contains("Error[TYPE_MISMATCH]"));
+        Assertions.assertTrue(output.contains("Stack trace:"));
+        Assertions.assertTrue(output.contains("at add(2 args)"));
+        Assertions.assertTrue(output.contains("at <repl>(0 args) @ 1:1"));
     }
 
     private String runSession(String input) {
