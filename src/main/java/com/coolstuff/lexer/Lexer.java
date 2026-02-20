@@ -105,6 +105,9 @@ public class Lexer {
                         case "if" -> TokenType.IF.token();
                         case "else" -> TokenType.ELSE.token();
                         case "return" -> TokenType.RETURN.token();
+                        case "while" -> TokenType.WHILE.token();
+                        case "break" -> TokenType.BREAK.token();
+                        case "continue" -> TokenType.CONTINUE.token();
                         default -> TokenType.IDENT.createToken(ident);
                     };
                 } else if (Character.isDigit(ch)) {

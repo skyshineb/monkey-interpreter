@@ -1,9 +1,12 @@
 package com.coolstuff;
 
 import com.coolstuff.ast.*;
+import com.coolstuff.ast.Nodes.BreakStatement;
+import com.coolstuff.ast.Nodes.ContinueStatement;
 import com.coolstuff.ast.Nodes.ExpressionStatement;
 import com.coolstuff.ast.Nodes.LetStatement;
 import com.coolstuff.ast.Nodes.ReturnStatement;
+import com.coolstuff.ast.Nodes.WhileStatement;
 import com.coolstuff.lexer.Lexer;
 import com.coolstuff.parser.Parser;
 import org.junit.jupiter.api.Assertions;
@@ -75,6 +78,64 @@ public class ParserTest {
             var value = stmt.returnValue();
             testLiteralExpression(value, test.returnValue);
         }
+    }
+
+
+    @Test
+    public void testWhileStatement() {
+        var input = "while (x < 10) { let x = x + 1; }";
+
+        var program = buildProgram(input);
+        Assertions.assertEquals(1, program.statements().length);
+
+        var statement = Assertions.assertInstanceOf(WhileStatement.class, program.statements()[0]);
+        testInfixExpression(statement.condition(), "x", "<", 10L);
+
+        Assertions.assertEquals(1, statement.body().statements().length);
+        var bodyStatement = Assertions.assertInstanceOf(LetStatement.class, statement.body().statements()[0]);
+        Assertions.assertEquals("x", bodyStatement.name().value());
+        testInfixExpression(bodyStatement.value(), "x", "+", 1L);
+    }
+
+    @Test
+    public void testWhileStatementNestedBlocks() {
+        var input = "while (x < 10) { if (x < 5) { x; } let x = x + 1; }";
+
+        var program = buildProgram(input);
+        var statement = Assertions.assertInstanceOf(WhileStatement.class, program.statements()[0]);
+
+        Assertions.assertEquals(2, statement.body().statements().length);
+        var ifStatement = Assertions.assertInstanceOf(ExpressionStatement.class, statement.body().statements()[0]);
+        Assertions.assertInstanceOf(IfExpression.class, ifStatement.expression());
+        var increment = Assertions.assertInstanceOf(LetStatement.class, statement.body().statements()[1]);
+        Assertions.assertEquals("x", increment.name().value());
+        testInfixExpression(increment.value(), "x", "+", 1L);
+    }
+
+    @Test
+    public void testNestedWhileStatements() {
+        var input = "while (x < 10) { while (y < 5) { y; } x; }";
+
+        var program = buildProgram(input);
+        var outer = Assertions.assertInstanceOf(WhileStatement.class, program.statements()[0]);
+        Assertions.assertEquals(2, outer.body().statements().length);
+
+        var inner = Assertions.assertInstanceOf(WhileStatement.class, outer.body().statements()[0]);
+        testInfixExpression(inner.condition(), "y", "<", 5L);
+    }
+
+    @Test
+    public void testBreakAndContinueStatements() {
+        var input = "while (true) { break; continue; break continue }";
+
+        var program = buildProgram(input);
+        var whileStatement = Assertions.assertInstanceOf(WhileStatement.class, program.statements()[0]);
+
+        Assertions.assertEquals(4, whileStatement.body().statements().length);
+        Assertions.assertInstanceOf(BreakStatement.class, whileStatement.body().statements()[0]);
+        Assertions.assertInstanceOf(ContinueStatement.class, whileStatement.body().statements()[1]);
+        Assertions.assertInstanceOf(BreakStatement.class, whileStatement.body().statements()[2]);
+        Assertions.assertInstanceOf(ContinueStatement.class, whileStatement.body().statements()[3]);
     }
 
     @Test

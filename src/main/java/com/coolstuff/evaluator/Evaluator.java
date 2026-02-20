@@ -2,9 +2,12 @@ package com.coolstuff.evaluator;
 
 import com.coolstuff.ast.*;
 import com.coolstuff.ast.Nodes.BlockStatement;
+import com.coolstuff.ast.Nodes.BreakStatement;
+import com.coolstuff.ast.Nodes.ContinueStatement;
 import com.coolstuff.ast.Nodes.ExpressionStatement;
 import com.coolstuff.ast.Nodes.LetStatement;
 import com.coolstuff.ast.Nodes.ReturnStatement;
+import com.coolstuff.ast.Nodes.WhileStatement;
 import com.coolstuff.evaluator.object.*;
 
 import java.util.*;
@@ -13,6 +16,7 @@ import java.util.*;
 public class Evaluator {
 
     private final Environment environment;
+    private int loopDepth = 0;
 
     public Evaluator() {
         this.environment = new Environment();
@@ -41,6 +45,9 @@ public class Evaluator {
             case ArrayLiteral arrayLiteral -> new MonkeyArray(List.of(evalExpressions(arrayLiteral.elements())));
             case IndexExpression indexExpression -> evalIndexExpression(indexExpression);
             case HashLiteral hashLiteral -> evalHashLiteral(hashLiteral);
+            case WhileStatement whileStatement -> evalWhileStatement(whileStatement);
+            case BreakStatement ignored -> evalBreakStatement();
+            case ContinueStatement ignored -> evalContinueStatement();
             default -> throw new EvaluationException("Unexpected value: " + node);
         };
     }
@@ -146,6 +153,49 @@ public class Evaluator {
         } else {
             return MonkeyNull.INSTANCE;
         }
+    }
+
+    private MonkeyObject<?> evalWhileStatement(WhileStatement whileStatement) throws EvaluationException {
+        MonkeyObject<?> result = MonkeyNull.INSTANCE;
+        loopDepth++;
+
+        try {
+            while (isTruth(eval(whileStatement.condition()))) {
+                result = eval(whileStatement.body());
+
+                if (result instanceof MonkeyBreak) {
+                    return MonkeyNull.INSTANCE;
+                }
+
+                if (result instanceof MonkeyContinue) {
+                    continue;
+                }
+
+                if (result instanceof MonkeyReturn<?>) {
+                    return result;
+                }
+            }
+        } finally {
+            loopDepth--;
+        }
+
+        return result;
+    }
+
+    private MonkeyObject<?> evalBreakStatement() throws EvaluationException {
+        if (loopDepth == 0) {
+            throw new EvaluationException("`break` not allowed outside loop");
+        }
+
+        return MonkeyBreak.INSTANCE;
+    }
+
+    private MonkeyObject<?> evalContinueStatement() throws EvaluationException {
+        if (loopDepth == 0) {
+            throw new EvaluationException("`continue` not allowed outside loop");
+        }
+
+        return MonkeyContinue.INSTANCE;
     }
 
     private MonkeyObject<?> evalInfixExpression(InfixExpression infixExpression) throws EvaluationException {
@@ -271,6 +321,10 @@ public class Evaluator {
                 }
 
                 return monkeyReturn;
+            }
+
+            if (result instanceof MonkeyBreak || result instanceof MonkeyContinue) {
+                return result;
             }
         }
 
