@@ -3,8 +3,11 @@ package com.coolstuff.parser;
 import com.coolstuff.ast.*;
 import com.coolstuff.ast.Nodes.BlockStatement;
 import com.coolstuff.ast.Nodes.ExpressionStatement;
+import com.coolstuff.ast.Nodes.BreakStatement;
+import com.coolstuff.ast.Nodes.ContinueStatement;
 import com.coolstuff.ast.Nodes.LetStatement;
 import com.coolstuff.ast.Nodes.ReturnStatement;
+import com.coolstuff.ast.Nodes.WhileStatement;
 import com.coolstuff.lexer.Lexer;
 import com.coolstuff.token.Token;
 import com.coolstuff.token.TokenType;
@@ -57,10 +60,63 @@ public class Parser {
             case RETURN -> {
                 return parseReturnStatement();
             }
+            case WHILE -> {
+                return parseWhileStatement();
+            }
+            case BREAK -> {
+                return parseBreakStatement();
+            }
+            case CONTINUE -> {
+                return parseContinueStatement();
+            }
             default -> {
                 return parseExpressionStatement();
             }
         }
+    }
+
+
+    private ContinueStatement parseContinueStatement() {
+        var token = curToken;
+
+        if (peekTokenIs(TokenType.SEMICOLON)) {
+            nextToken();
+        }
+
+        return new ContinueStatement(token);
+    }
+
+    private BreakStatement parseBreakStatement() {
+        var token = curToken;
+
+        if (peekTokenIs(TokenType.SEMICOLON)) {
+            nextToken();
+        }
+
+        return new BreakStatement(token);
+    }
+
+    private WhileStatement parseWhileStatement() {
+        var token = curToken;
+
+        if (!expectPeek(TokenType.LPAREN)) {
+            return null;
+        }
+
+        nextToken();
+        var condition = parseExpression(LOWEST);
+
+        if (!expectPeek(TokenType.RPAREN)) {
+            return null;
+        }
+
+        if (!expectPeek(TokenType.LBRACE)) {
+            return null;
+        }
+
+        var body = parseBlockStatement();
+
+        return new WhileStatement(token, condition, body);
     }
 
     private ExpressionStatement parseExpressionStatement() {

@@ -50,6 +50,11 @@ public class TokenTest {
                 } else {
                 return false;
                 }
+
+                while (10 > 1) {
+                continue;
+                break;
+                }
                 
                 10 == 10;
                 10 != 9;
@@ -129,6 +134,18 @@ public class TokenTest {
                 new Token(TokenType.LBRACE, "{"),
                 new Token(TokenType.RETURN, "return"),
                 new Token(TokenType.FALSE, "false"),
+                new Token(TokenType.SEMICOLON, ";"),
+                new Token(TokenType.RBRACE, "}"),
+                new Token(TokenType.WHILE, "while"),
+                new Token(TokenType.LPAREN, "("),
+                new Token(TokenType.INT, "10"),
+                new Token(TokenType.GT, ">"),
+                new Token(TokenType.INT, "1"),
+                new Token(TokenType.RPAREN, ")"),
+                new Token(TokenType.LBRACE, "{"),
+                new Token(TokenType.CONTINUE, "continue"),
+                new Token(TokenType.SEMICOLON, ";"),
+                new Token(TokenType.BREAK, "break"),
                 new Token(TokenType.SEMICOLON, ";"),
                 new Token(TokenType.RBRACE, "}"),
                 new Token(TokenType.INT, "10"),

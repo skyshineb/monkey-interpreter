@@ -160,6 +160,75 @@ public class EvaluatorTest {
         }
     }
 
+
+    @Test
+    public void testWhileLoopAccumulation() throws EvaluationException {
+        var input = "let i = 0; let sum = 0; while (i < 5) { let sum = sum + i; let i = i + 1; } sum;";
+
+        var evaluated = testEval(input);
+        testIntegerObject(evaluated, 10L);
+    }
+
+    @Test
+    public void testWhileLoopContinue() throws EvaluationException {
+        var input = "let i = 0; let sum = 0; while (i < 6) { let i = i + 1; if (i == 3) { continue; } let sum = sum + i; } sum;";
+
+        var evaluated = testEval(input);
+        testIntegerObject(evaluated, 18L);
+    }
+
+    @Test
+    public void testWhileLoopContinueDoesNotLeakControlSignal() throws EvaluationException {
+        var input = "let i = 0; while (i < 1) { let i = i + 1; continue; } 99;";
+
+        var evaluated = testEval(input);
+        testIntegerObject(evaluated, 99L);
+    }
+
+    @Test
+    public void testWhileLoopBreak() throws EvaluationException {
+        var input = "let i = 0; while (i < 10) { let i = i + 1; if (i == 4) { break; } } i;";
+
+        var evaluated = testEval(input);
+        testIntegerObject(evaluated, 4L);
+    }
+
+    @Test
+    public void testNestedWhileBreakAffectsNearestLoop() throws EvaluationException {
+        var input = "let outer = 0; while (outer < 3) { let outer = outer + 1; let inner = 0; while (inner < 10) { let inner = inner + 1; break; } } outer;";
+
+        var evaluated = testEval(input);
+        testIntegerObject(evaluated, 3L);
+    }
+
+    @Test
+    public void testReturnInsideWhileInsideFunction() throws EvaluationException {
+        var input = "let loop = fn() { let i = 0; while (i < 5) { if (i == 3) { return i; } let i = i + 1; } return 99; }; loop();";
+
+        var evaluated = testEval(input);
+        testIntegerObject(evaluated, 3L);
+    }
+
+    @Test
+    public void testBreakAndContinueOutsideLoopErrors() {
+        var tests = List.of(
+                List.of("break;", "Error evaluating the program: `break` not allowed outside loop"),
+                List.of("continue;", "Error evaluating the program: `continue` not allowed outside loop")
+        );
+
+        for (var test : tests) {
+            EvaluationException exception = null;
+            try {
+                testEval(test.getFirst());
+            } catch (EvaluationException e) {
+                exception = e;
+            }
+
+            Assertions.assertNotNull(exception);
+            Assertions.assertEquals(test.get(1), exception.getMessage());
+        }
+    }
+
     @Test
     public void testErrorHandling() {
         var tests = List.of(

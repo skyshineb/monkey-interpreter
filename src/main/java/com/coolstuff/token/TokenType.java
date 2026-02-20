@@ -46,7 +46,10 @@ public enum TokenType {
     FALSE("false"),
     IF("if"),
     ELSE("else"),
-    RETURN("return");
+    RETURN("return"),
+    WHILE("while"),
+    BREAK("break"),
+    CONTINUE("continue");
 
     private final Token token;
 
