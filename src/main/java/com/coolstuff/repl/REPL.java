@@ -1,19 +1,23 @@
 package com.coolstuff.repl;
 
 import com.coolstuff.ast.Program;
+import com.coolstuff.evaluator.Environment;
 import com.coolstuff.evaluator.EvaluationException;
 import com.coolstuff.evaluator.Evaluator;
 import com.coolstuff.evaluator.object.MonkeyObject;
 import com.coolstuff.lexer.Lexer;
 import com.coolstuff.parser.Parser;
+import com.coolstuff.token.Token;
+import com.coolstuff.token.TokenType;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.UncheckedIOException;
-import java.io.BufferedReader;
 import java.nio.charset.StandardCharsets;
+import java.util.Comparator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
@@ -41,6 +45,7 @@ public class REPL {
     private final Appendable out;
     private final Evaluator evaluator;
     private final InputAccumulator inputAccumulator;
+    private PendingInputAction pendingInputAction = PendingInputAction.EVALUATE;
 
     public REPL() {
         this(System.in, System.out);
@@ -150,8 +155,15 @@ public class REPL {
     }
 
     private boolean readAndEvaluateInputLine(StringBuilder inputBuffer, String inputLine, boolean stopOnSessionTerminationCommand) {
-        if (stopOnSessionTerminationCommand && inputBuffer.isEmpty() && isSessionTerminationCommand(inputLine)) {
+        var trimmedInput = inputLine.trim();
+
+        if (stopOnSessionTerminationCommand && inputBuffer.isEmpty() && isSessionTerminationCommand(trimmedInput)) {
             return true;
+        }
+
+        if (inputBuffer.isEmpty() && trimmedInput.startsWith(":")) {
+            handleMetaCommand(inputBuffer, trimmedInput);
+            return false;
         }
 
         if (!inputBuffer.isEmpty()) {
@@ -163,9 +175,59 @@ public class REPL {
             return false;
         }
 
-        evaluateInput(inputBuffer.toString());
+        processCompletedInput(inputBuffer.toString());
         inputBuffer.setLength(0);
         return false;
+    }
+
+    private void processCompletedInput(String input) {
+        switch (pendingInputAction) {
+            case TOKENS -> {
+                printTokens(input);
+                pendingInputAction = PendingInputAction.EVALUATE;
+            }
+            case AST -> {
+                printAst(input);
+                pendingInputAction = PendingInputAction.EVALUATE;
+            }
+            case EVALUATE -> evaluateInput(input);
+        }
+    }
+
+    private void handleMetaCommand(StringBuilder inputBuffer, String trimmedInput) {
+        if (!inputBuffer.isEmpty()) {
+            println("Meta-commands are only allowed when the multiline buffer is empty.");
+            return;
+        }
+
+        var parts = trimmedInput.split("\\s+", 2);
+        var command = parts[0];
+        var commandInput = parts.length > 1 ? parts[1] : "";
+
+        switch (command) {
+            case ":help" -> printHelp();
+            case ":tokens" -> {
+                if (commandInput.isBlank()) {
+                    pendingInputAction = PendingInputAction.TOKENS;
+                    println("Token debug mode: enter the next complete input to inspect tokens.");
+                } else {
+                    printTokens(commandInput);
+                }
+            }
+            case ":ast" -> {
+                if (commandInput.isBlank()) {
+                    pendingInputAction = PendingInputAction.AST;
+                    println("AST debug mode: enter the next complete input to inspect the parsed AST.");
+                } else {
+                    printAst(commandInput);
+                }
+            }
+            case ":env" -> printEnvironmentBindings();
+            case ":quit", ":exit" -> {
+                // handled before generic command processing
+            }
+            default -> println("Unknown command: " + command + ". Type :help for available commands.");
+        }
     }
 
     private boolean isSessionTerminationCommand(String input) {
@@ -187,6 +249,54 @@ public class REPL {
         } catch (EvaluationException exc) {
             println(exc.getRuntimeError().formatMultiline());
         }
+    }
+
+    private void printHelp() {
+        println("Available commands:");
+        println("  :help                Show this help message.");
+        println("  :tokens [input]      Show tokens for inline input, or for the next complete input when omitted.");
+        println("  :ast [input]         Show Program.string() output for inline input, or for the next complete input when omitted.");
+        println("  :env                 Show current environment bindings.");
+        println("  :quit / :exit        Exit the REPL.");
+        println("Note: meta-commands are only accepted when the multiline buffer is empty.");
+    }
+
+    private void printTokens(String input) {
+        println("TOKENS:");
+        var lexer = new Lexer(input);
+        Token token;
+        do {
+            token = lexer.nextToken();
+            println("  %s('%s') @ %s".formatted(token.type(), token.token(), token.position()));
+        } while (token.type() != TokenType.EOF);
+    }
+
+    private void printAst(String input) {
+        var parser = new Parser(new Lexer(input));
+        var program = parser.parseProgram();
+
+        if (!parser.getErrors().isEmpty()) {
+            printParseErrors(parser.getErrors());
+            return;
+        }
+
+        println("AST:");
+        println(program.string());
+    }
+
+    private void printEnvironmentBindings() {
+        Environment environment = evaluator.getEnvironment();
+        var bindings = environment.snapshotCurrentScope();
+
+        println("ENV:");
+        if (bindings.isEmpty()) {
+            println("  (empty)");
+            return;
+        }
+
+        bindings.entrySet().stream()
+                .sorted(Comparator.comparing(java.util.Map.Entry::getKey))
+                .forEach(entry -> println("  %s = %s".formatted(entry.getKey(), entry.getValue().inspect())));
     }
 
     private void printParseErrors(List<String> errors) {
@@ -211,5 +321,11 @@ public class REPL {
         } catch (IOException exc) {
             throw new UncheckedIOException(exc);
         }
+    }
+
+    private enum PendingInputAction {
+        EVALUATE,
+        TOKENS,
+        AST
     }
 }

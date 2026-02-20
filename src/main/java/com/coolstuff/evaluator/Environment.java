@@ -2,7 +2,9 @@ package com.coolstuff.evaluator;
 
 import com.coolstuff.evaluator.object.MonkeyObject;
 
+import java.util.LinkedHashMap;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 public class Environment {
@@ -33,5 +35,18 @@ public class Environment {
         }
 
         return Optional.of(value);
+    }
+
+    public Map<String, MonkeyObject<?>> snapshotCurrentScope() {
+        return Map.copyOf(bindings);
+    }
+
+    public Map<String, MonkeyObject<?>> snapshotMergedScopes() {
+        var merged = new LinkedHashMap<String, MonkeyObject<?>>();
+        if (upper != null) {
+            merged.putAll(upper.snapshotMergedScopes());
+        }
+        merged.putAll(bindings);
+        return Map.copyOf(merged);
     }
 }

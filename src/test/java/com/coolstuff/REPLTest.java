@@ -268,6 +268,90 @@ public class REPLTest {
         Assertions.assertTrue(output.contains("at <repl>(0 args) @ 1:1"));
     }
 
+
+    @Test
+    public void helpCommandIncludesAllSupportedCommands() {
+        var output = runSession(":help\n");
+
+        Assertions.assertTrue(output.contains(":help"));
+        Assertions.assertTrue(output.contains(":tokens"));
+        Assertions.assertTrue(output.contains(":ast"));
+        Assertions.assertTrue(output.contains(":env"));
+        Assertions.assertTrue(output.contains(":quit / :exit"));
+    }
+
+    @Test
+    public void tokensCommandPrintsDeterministicTokenStream() {
+        var output = runSession(":tokens let x = 5;\n");
+
+        Assertions.assertTrue(output.contains("TOKENS:"));
+        Assertions.assertTrue(output.contains("LET('let') @ 1:1"));
+        Assertions.assertTrue(output.contains("IDENT('x') @ 1:5"));
+        Assertions.assertTrue(output.contains("ASSIGN('=') @ 1:7"));
+        Assertions.assertTrue(output.contains("INT('5') @ 1:9"));
+        Assertions.assertTrue(output.contains("SEMICOLON(';') @ 1:10"));
+        Assertions.assertTrue(output.contains("EOF('eof') @ 1:11"));
+    }
+
+    @Test
+    public void astCommandPrintsProgramStringAndParseErrors() {
+        var astOutput = runSession(":ast let x = 5;\n");
+        Assertions.assertTrue(astOutput.contains("AST:"));
+        Assertions.assertTrue(astOutput.contains("let x = 5;"));
+
+        var errorOutput = runSession(":ast let x = ;\n");
+        Assertions.assertTrue(errorOutput.contains("Woops! We ran into some monkey business here!"));
+        Assertions.assertTrue(errorOutput.contains("no prefix parse function for ; found"));
+    }
+
+    @Test
+    public void envCommandShowsPersistedBindingsAcrossInputs() {
+        var output = runSession("let a = 5;\nlet b = a + 2;\n:env\n");
+
+        Assertions.assertTrue(output.contains("ENV:"));
+        Assertions.assertTrue(output.contains("a = 5"));
+        Assertions.assertTrue(output.contains("b = 7"));
+    }
+
+    @Test
+    public void metaCommandsDoNotMutateEvaluatorStateUnexpectedly() {
+        var output = runSession("let a = 5;\n:tokens a + 1;\na;\n");
+
+        Assertions.assertTrue(output.contains("TOKENS:"));
+        Assertions.assertTrue(output.contains("5"));
+        Assertions.assertFalse(output.contains("Identifier not found: a"));
+    }
+
+    @Test
+    public void mixedSessionWithDebugCommandsAndRecoveryWorks() {
+        var output = runSession("""
+                let base = 2;
+                :env
+                :tokens base + 3;
+                :ast let total = base + 1;
+                unknown;
+                let recovered = base + 40;
+                :env
+                recovered;
+                """);
+
+        Assertions.assertTrue(output.contains("ENV:"));
+        Assertions.assertTrue(output.contains("TOKENS:"));
+        Assertions.assertTrue(output.contains("AST:"));
+        Assertions.assertTrue(output.contains("Identifier not found: unknown"));
+        Assertions.assertTrue(output.contains("recovered = 42"));
+        Assertions.assertTrue(output.contains("42"));
+    }
+
+    @Test
+    public void linesStartingWithColonAreTreatedAsProgramInputDuringMultilineBuffering() {
+        var output = runSession("let hash = {\n\"a\"\n: 1\n};\nhash;\n");
+
+        Assertions.assertTrue(output.contains("{a : 1}"));
+        Assertions.assertFalse(output.contains("Unknown command"));
+        Assertions.assertFalse(output.contains("Meta-commands are only allowed when the multiline buffer is empty."));
+    }
+
     private String runSession(String input) {
         byte[] bytes = input.getBytes(StandardCharsets.UTF_8);
         ByteArrayInputStream in = new ByteArrayInputStream(bytes);
