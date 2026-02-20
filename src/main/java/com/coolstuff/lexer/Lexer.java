@@ -8,6 +8,10 @@ public class Lexer {
     int position; // current position int the input (points to current char)
     int readPosition; // current reading position (after current char)
     char ch; // current char under examination
+    int line = 1;
+    int column = 1;
+    int currentLine = 1;
+    int currentColumn = 1;
 
     public Lexer(String input) {
         this.input = input;
@@ -17,9 +21,21 @@ public class Lexer {
     public void readChar() {
         if (readPosition >= input.length()) {
             ch = 0;
+            currentLine = line;
+            currentColumn = column;
         } else {
             ch = input.charAt(readPosition);
+            currentLine = line;
+            currentColumn = column;
         }
+
+        if (ch == '\n') {
+            line++;
+            column = 1;
+        } else {
+            column++;
+        }
+
         position = readPosition;
         readPosition += 1;
     }
@@ -27,93 +43,93 @@ public class Lexer {
     public Token nextToken() {
         Token tok;
         skipWhitespaces();
+        var tokenLine = currentLine;
+        var tokenColumn = currentColumn;
 
         switch (ch) {
             case '=' -> {
                 if (peekChar() == '=') {
                     readChar();
-                    tok = TokenType.EQ.token();
+                    tok = TokenType.EQ.token(tokenLine, tokenColumn);
                 } else {
-                    tok = TokenType.ASSIGN.token();
+                    tok = TokenType.ASSIGN.token(tokenLine, tokenColumn);
                 }
-
-
             }
-            case '+' -> tok = TokenType.PLUS.token();
-            case '-' -> tok = TokenType.MINUS.token();
+            case '+' -> tok = TokenType.PLUS.token(tokenLine, tokenColumn);
+            case '-' -> tok = TokenType.MINUS.token(tokenLine, tokenColumn);
             case '!' -> {
                 if (peekChar() == '=') {
                     readChar();
-                    tok = TokenType.NOT_EQ.token();
+                    tok = TokenType.NOT_EQ.token(tokenLine, tokenColumn);
                 } else {
-                    tok = TokenType.BANG.token();
+                    tok = TokenType.BANG.token(tokenLine, tokenColumn);
                 }
             }
             case '&' -> {
                 if (peekChar() == '&') {
                     readChar();
-                    tok = TokenType.AND.token();
+                    tok = TokenType.AND.token(tokenLine, tokenColumn);
                 } else {
-                    tok = new Token(TokenType.ILLEGAL, Character.toString(ch));
+                    tok = new Token(TokenType.ILLEGAL, Character.toString(ch), tokenLine, tokenColumn);
                 }
             }
             case '|' -> {
                 if (peekChar() == '|') {
                     readChar();
-                    tok = TokenType.OR.token();
+                    tok = TokenType.OR.token(tokenLine, tokenColumn);
                 } else {
-                    tok = new Token(TokenType.ILLEGAL, Character.toString(ch));
+                    tok = new Token(TokenType.ILLEGAL, Character.toString(ch), tokenLine, tokenColumn);
                 }
             }
-            case '/' -> tok = TokenType.SLASH.token();
-            case '*' -> tok = TokenType.ASTERISK.token();
+            case '/' -> tok = TokenType.SLASH.token(tokenLine, tokenColumn);
+            case '*' -> tok = TokenType.ASTERISK.token(tokenLine, tokenColumn);
             case '<' -> {
                 if (peekChar() == '=') {
                     readChar();
-                    tok = TokenType.LTE.token();
+                    tok = TokenType.LTE.token(tokenLine, tokenColumn);
                 } else {
-                    tok = TokenType.LT.token();
+                    tok = TokenType.LT.token(tokenLine, tokenColumn);
                 }
             }
             case '>' -> {
                 if (peekChar() == '=') {
                     readChar();
-                    tok = TokenType.GTE.token();
+                    tok = TokenType.GTE.token(tokenLine, tokenColumn);
                 } else {
-                    tok = TokenType.GT.token();
+                    tok = TokenType.GT.token(tokenLine, tokenColumn);
                 }
             }
-            case ';' -> tok = TokenType.SEMICOLON.token();
-            case ':' -> tok = TokenType.COLON.token();
-            case '(' -> tok = TokenType.LPAREN.token();
-            case ')' -> tok = TokenType.RPAREN.token();
-            case ',' -> tok = TokenType.COMMA.token();
-            case '{' -> tok = TokenType.LBRACE.token();
-            case '}' -> tok = TokenType.RBRACE.token();
-            case '[' -> tok = TokenType.LBRACKET.token();
-            case ']' -> tok = TokenType.RBRACKET.token();
-            case '"' -> tok = new Token(TokenType.STRING, readString());
-            case 0 -> tok = TokenType.EOF.token();
+            case ';' -> tok = TokenType.SEMICOLON.token(tokenLine, tokenColumn);
+            case ':' -> tok = TokenType.COLON.token(tokenLine, tokenColumn);
+            case '(' -> tok = TokenType.LPAREN.token(tokenLine, tokenColumn);
+            case ')' -> tok = TokenType.RPAREN.token(tokenLine, tokenColumn);
+            case ',' -> tok = TokenType.COMMA.token(tokenLine, tokenColumn);
+            case '{' -> tok = TokenType.LBRACE.token(tokenLine, tokenColumn);
+            case '}' -> tok = TokenType.RBRACE.token(tokenLine, tokenColumn);
+            case '[' -> tok = TokenType.LBRACKET.token(tokenLine, tokenColumn);
+            case ']' -> tok = TokenType.RBRACKET.token(tokenLine, tokenColumn);
+            case '"' -> tok = new Token(TokenType.STRING, readString(), tokenLine, tokenColumn);
+            case 0 -> tok = TokenType.EOF.token(tokenLine, tokenColumn);
             default -> {
                 if (Character.isJavaIdentifierStart(ch)) {
                     String ident = readIdentifier();
                     return switch (ident) {
-                        case "fn" -> TokenType.FUNCTION.token();
-                        case "let" -> TokenType.LET.token();
-                        case "true" -> TokenType.TRUE.token();
-                        case "false" -> TokenType.FALSE.token();
-                        case "if" -> TokenType.IF.token();
-                        case "else" -> TokenType.ELSE.token();
-                        case "return" -> TokenType.RETURN.token();
-                        case "while" -> TokenType.WHILE.token();
-                        case "break" -> TokenType.BREAK.token();
-                        case "continue" -> TokenType.CONTINUE.token();
-                        default -> TokenType.IDENT.createToken(ident);
+                        case "fn" -> TokenType.FUNCTION.token(tokenLine, tokenColumn);
+                        case "let" -> TokenType.LET.token(tokenLine, tokenColumn);
+                        case "true" -> TokenType.TRUE.token(tokenLine, tokenColumn);
+                        case "false" -> TokenType.FALSE.token(tokenLine, tokenColumn);
+                        case "if" -> TokenType.IF.token(tokenLine, tokenColumn);
+                        case "else" -> TokenType.ELSE.token(tokenLine, tokenColumn);
+                        case "return" -> TokenType.RETURN.token(tokenLine, tokenColumn);
+                        case "while" -> TokenType.WHILE.token(tokenLine, tokenColumn);
+                        case "break" -> TokenType.BREAK.token(tokenLine, tokenColumn);
+                        case "continue" -> TokenType.CONTINUE.token(tokenLine, tokenColumn);
+                        default -> TokenType.IDENT.createToken(ident, tokenLine, tokenColumn);
                     };
                 } else if (Character.isDigit(ch)) {
-                    return TokenType.INT.createToken(readNumber());
+                    return TokenType.INT.createToken(readNumber(), tokenLine, tokenColumn);
                 } else {
-                    tok = new Token(TokenType.ILLEGAL, Character.toString(ch));
+                    tok = new Token(TokenType.ILLEGAL, Character.toString(ch), tokenLine, tokenColumn);
                 }
             }
         }

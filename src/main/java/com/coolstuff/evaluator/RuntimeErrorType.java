@@ -1,0 +1,14 @@
+package com.coolstuff.evaluator;
+
+public enum RuntimeErrorType {
+    TYPE_MISMATCH,
+    UNKNOWN_IDENTIFIER,
+    INDEX_OUT_OF_BOUNDS,
+    NOT_CALLABLE,
+    INVALID_CONTROL_FLOW,
+    INVALID_ARGUMENT,
+    INVALID_INDEX,
+    INVALID_HASH_KEY,
+    DIVISION_BY_ZERO,
+    UNSUPPORTED_OPERATION
+}

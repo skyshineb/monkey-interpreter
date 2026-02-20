@@ -7,5 +7,5 @@ import java.util.List;
 
 @FunctionalInterface
 public interface MonkeyFunctionInterface {
-    MonkeyObject<?> apply(Token callToken, List<MonkeyObject<?>> arguments) throws EvaluationException;
+    MonkeyObject<?> apply(Token callToken, List<MonkeyObject<?>> arguments, Evaluator evaluator) throws EvaluationException;
 }

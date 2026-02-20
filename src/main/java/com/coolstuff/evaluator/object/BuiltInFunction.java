@@ -4,10 +4,16 @@ import com.coolstuff.evaluator.AbstractMonkeyFunction;
 import com.coolstuff.evaluator.MonkeyFunctionInterface;
 
 public class BuiltInFunction extends AbstractMonkeyFunction {
+    private final String name;
 
-    public BuiltInFunction(MonkeyFunctionInterface functionInterface) {
+    public BuiltInFunction(String name, MonkeyFunctionInterface functionInterface) {
         super(ObjectType.BUILTIN_OBJ);
+        this.name = name;
         setObject(functionInterface);
+    }
+
+    public String getName() {
+        return name;
     }
 
     @Override
