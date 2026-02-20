@@ -31,6 +31,10 @@ public class Evaluator {
         return new Evaluator(env, callStack);
     }
 
+    public Environment getEnvironment() {
+        return environment;
+    }
+
     public EvaluationException error(RuntimeErrorType type, Token token, String message, Object... args) {
         return EvaluationException.from(type, token.position(), snapshotStack(), message, args);
     }

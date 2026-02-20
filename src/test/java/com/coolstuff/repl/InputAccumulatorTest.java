@@ -36,4 +36,21 @@ class InputAccumulatorTest {
     void unmatchedClosingDelimiterInsideStringDoesNotCompleteInput() {
         Assertions.assertFalse(inputAccumulator.isInputComplete("let a = \"}\" + {"));
     }
+
+    @Test
+    void multilineFunctionLiteralCompletesAfterClosingBrace() {
+        Assertions.assertFalse(inputAccumulator.isInputComplete("let add = fn(x, y) {\nx + y;"));
+        Assertions.assertTrue(inputAccumulator.isInputComplete("let add = fn(x, y) {\nx + y;\n};"));
+    }
+
+    @Test
+    void nestedWhileAndFunctionBlocksAreTracked() {
+        Assertions.assertFalse(inputAccumulator.isInputComplete("while (x < 10) {\nlet next = fn(y) {\ny + 1;\n};"));
+        Assertions.assertTrue(inputAccumulator.isInputComplete("while (x < 10) {\nlet next = fn(y) {\ny + 1;\n};\n}"));
+    }
+
+    @Test
+    void bracesInsideMultilineStringDoNotAffectCompleteness() {
+        Assertions.assertTrue(inputAccumulator.isInputComplete("let template = \"line1\\n{line2 [x]}\\n\";"));
+    }
 }
