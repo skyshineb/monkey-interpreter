@@ -344,11 +344,12 @@ public class REPLTest {
     }
 
     @Test
-    public void metaCommandsAreBlockedDuringMultilineBuffering() {
-        var output = runSession("if (true) {\n:env\n5;\n}\n");
+    public void linesStartingWithColonAreTreatedAsProgramInputDuringMultilineBuffering() {
+        var output = runSession("let hash = {\n\"a\"\n: 1\n};\nhash;\n");
 
-        Assertions.assertTrue(output.contains("Meta-commands are only allowed when the multiline buffer is empty."));
-        Assertions.assertTrue(output.contains("5"));
+        Assertions.assertTrue(output.contains("{a : 1}"));
+        Assertions.assertFalse(output.contains("Unknown command"));
+        Assertions.assertFalse(output.contains("Meta-commands are only allowed when the multiline buffer is empty."));
     }
 
     private String runSession(String input) {

@@ -161,7 +161,7 @@ public class REPL {
             return true;
         }
 
-        if (trimmedInput.startsWith(":")) {
+        if (inputBuffer.isEmpty() && trimmedInput.startsWith(":")) {
             handleMetaCommand(inputBuffer, trimmedInput);
             return false;
         }
