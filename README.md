@@ -49,6 +49,7 @@ You can run Monkey source files without entering REPL:
 
 ```bash
 java -jar target/monkey-1.0-SNAPSHOT.jar run path/to/program.monkey
+java -jar target/monkey-1.0-SNAPSHOT.jar bench path/to/program.monkey
 java -jar target/monkey-1.0-SNAPSHOT.jar --tokens path/to/program.monkey
 java -jar target/monkey-1.0-SNAPSHOT.jar --ast path/to/program.monkey
 ```

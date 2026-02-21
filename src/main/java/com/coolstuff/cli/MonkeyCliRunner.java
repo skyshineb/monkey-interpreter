@@ -9,7 +9,7 @@ import java.nio.file.Path;
 import java.util.stream.Collectors;
 
 public class MonkeyCliRunner {
-    private static final String USAGE = "Usage: monkey [run <path> | --tokens <path> | --ast <path>]";
+    private static final String USAGE = "Usage: monkey [run <path> | bench <path> | --tokens <path> | --ast <path>]";
 
     private final MonkeyPipeline pipeline;
 
@@ -54,6 +54,7 @@ public class MonkeyCliRunner {
 
         return switch (mode) {
             case RUN -> runProgram(sourcePath, input);
+            case BENCH -> benchProgram(sourcePath, input);
             case TOKENS -> printTokens(input);
             case AST -> printAst(sourcePath, input);
         };
@@ -79,6 +80,19 @@ public class MonkeyCliRunner {
         }
 
         return CliResult.success(result.value().inspect() + System.lineSeparator());
+    }
+
+    private CliResult benchProgram(Path sourcePath, String input) {
+        var startNanos = System.nanoTime();
+        var runResult = runProgram(sourcePath, input);
+        var elapsedMillis = (System.nanoTime() - startNanos) / 1_000_000.0;
+        var timing = "Execution time: %.3f ms%n".formatted(elapsedMillis);
+
+        return new CliResult(
+                runResult.exitCode(),
+                runResult.stdoutText(),
+                runResult.stderrText() + timing
+        );
     }
 
     private CliResult printTokens(String input) {
@@ -124,12 +138,14 @@ public class MonkeyCliRunner {
 
     enum Mode {
         RUN,
+        BENCH,
         TOKENS,
         AST;
 
         static Mode fromCommand(String command) {
             return switch (command) {
                 case "run" -> RUN;
+                case "bench" -> BENCH;
                 case "--tokens" -> TOKENS;
                 case "--ast" -> AST;
                 default -> null;

@@ -34,6 +34,20 @@ public class MonkeyCliRunnerTest {
         Assertions.assertEquals("", errBuffer.toString(StandardCharsets.UTF_8));
     }
 
+
+    @Test
+    public void benchModeEvaluatesProgramAndReportsTiming() throws Exception {
+        Path source = tempDir.resolve("program.monkey");
+        Files.writeString(source, "40 + 2;", StandardCharsets.UTF_8);
+
+        var result = new MonkeyCliRunner().execute(new String[]{"bench", source.toString()});
+
+        Assertions.assertEquals(0, result.exitCode());
+        Assertions.assertEquals("42\n", result.stdoutText());
+        Assertions.assertTrue(result.stderrText().startsWith("Execution time: "));
+        Assertions.assertTrue(result.stderrText().endsWith(" ms\n"));
+    }
+
     @Test
     public void astModeReturnsFormattedParseErrors() throws Exception {
         Path source = tempDir.resolve("bad.monkey");
