@@ -145,6 +145,24 @@ public class CliRunnerTest {
 
         Assertions.assertEquals(1, exitCode);
         Assertions.assertEquals("", outBuffer.toString(StandardCharsets.UTF_8));
-        Assertions.assertTrue(errBuffer.toString(StandardCharsets.UTF_8).startsWith("Failed to read file: "));
+        Assertions.assertTrue(errBuffer.toString(StandardCharsets.UTF_8).startsWith("Invalid path: "));
+    }
+
+    @Test
+    public void missingFileReturnsConcisePathError() {
+        ByteArrayOutputStream outBuffer = new ByteArrayOutputStream();
+        ByteArrayOutputStream errBuffer = new ByteArrayOutputStream();
+
+        Path missing = tempDir.resolve("missing.monkey");
+
+        int exitCode = new CliRunner().run(
+                new String[]{"run", missing.toString()},
+                new PrintStream(outBuffer, true, StandardCharsets.UTF_8),
+                new PrintStream(errBuffer, true, StandardCharsets.UTF_8)
+        );
+
+        Assertions.assertEquals(1, exitCode);
+        Assertions.assertEquals("", outBuffer.toString(StandardCharsets.UTF_8));
+        Assertions.assertEquals("File not found: " + missing + "\n", errBuffer.toString(StandardCharsets.UTF_8));
     }
 }

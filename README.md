@@ -43,6 +43,21 @@ The base version of interpreter is done.
   - `:ast [input]` shows `Program.string()` for inline input or the next complete input
   - `:env` prints current environment bindings
 
+#### CLI script mode
+
+You can run Monkey source files without entering REPL:
+
+```bash
+java -jar target/monkey-1.0-SNAPSHOT.jar run path/to/program.monkey
+java -jar target/monkey-1.0-SNAPSHOT.jar --tokens path/to/program.monkey
+java -jar target/monkey-1.0-SNAPSHOT.jar --ast path/to/program.monkey
+```
+
+CLI errors are deterministic and concise:
+- parser failures: `Parse errors in <path>:` followed by one `- ...` line per parser error
+- runtime failures: `Runtime error in <path>:` followed by the formatted runtime error block
+- file loading failures: `<reason>: <path>` (for example `File not found: <path>`)
+
 #### Build and test
 
 Run from the project root:
