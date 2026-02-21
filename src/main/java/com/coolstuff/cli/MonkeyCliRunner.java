@@ -30,12 +30,12 @@ public class MonkeyCliRunner {
 
     CliResult execute(String[] args) {
         if (args.length != 2) {
-            return CliResult.error(usageText());
+            return CliResult.usageError(usageText());
         }
 
         var mode = Mode.fromCommand(args[0]);
         if (mode == null) {
-            return CliResult.error(usageText());
+            return CliResult.usageError(usageText());
         }
 
         Path sourcePath;
@@ -115,6 +115,10 @@ public class MonkeyCliRunner {
 
         static CliResult error(String stderrText) {
             return new CliResult(1, "", stderrText);
+        }
+
+        static CliResult usageError(String stderrText) {
+            return new CliResult(2, "", stderrText);
         }
     }
 

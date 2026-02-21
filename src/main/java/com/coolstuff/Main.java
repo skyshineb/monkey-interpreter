@@ -1,18 +1,12 @@
 package com.coolstuff;
 
-import com.coolstuff.repl.REPL;
+import com.coolstuff.cli.MonkeyCommandRunner;
 
 public class Main {
     public static void main(String[] args) {
-        if (args.length == 0) {
-            System.out.println("Welcome to the Monkey programming language!");
-            System.out.println("Feel free by typing commands\n");
-            REPL repl = new REPL();
-            repl.start();
-            return;
+        var exitCode = new MonkeyCommandRunner().run(args, System.in, System.out, System.err);
+        if (args.length > 0) {
+            System.exit(exitCode);
         }
-
-        var exitCode = new CliRunner().run(args, System.out, System.err);
-        System.exit(exitCode);
     }
 }
