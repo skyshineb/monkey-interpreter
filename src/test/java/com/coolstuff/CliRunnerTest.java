@@ -114,6 +114,25 @@ public class CliRunnerTest {
     }
 
     @Test
+    public void invalidCommandWithMalformedPathStillPrintsUsage() {
+        ByteArrayOutputStream outBuffer = new ByteArrayOutputStream();
+        ByteArrayOutputStream errBuffer = new ByteArrayOutputStream();
+
+        int exitCode = new CliRunner().run(
+                new String[]{"nope", "\0"},
+                new PrintStream(outBuffer, true, StandardCharsets.UTF_8),
+                new PrintStream(errBuffer, true, StandardCharsets.UTF_8)
+        );
+
+        Assertions.assertEquals(1, exitCode);
+        Assertions.assertEquals("", outBuffer.toString(StandardCharsets.UTF_8));
+        Assertions.assertEquals(
+                "Usage: monkey [run <path> | --tokens <path> | --ast <path>]\n",
+                errBuffer.toString(StandardCharsets.UTF_8)
+        );
+    }
+
+    @Test
     public void invalidPathReturnsReadErrorInsteadOfCrashing() {
         ByteArrayOutputStream outBuffer = new ByteArrayOutputStream();
         ByteArrayOutputStream errBuffer = new ByteArrayOutputStream();
