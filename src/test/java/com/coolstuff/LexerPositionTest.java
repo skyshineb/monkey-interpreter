@@ -56,4 +56,19 @@ public class LexerPositionTest {
         Assertions.assertEquals(1, token.position().line());
         Assertions.assertEquals(4, token.position().column());
     }
+
+    @Test
+    void tracksPositionsAfterComments() {
+        var lexer = new Lexer("let x = 1; # ignore this\n# whole line\nlet y = 2;");
+
+        for (int i = 0; i < 5; i++) {
+            lexer.nextToken();
+        }
+
+        var secondLet = lexer.nextToken();
+        Assertions.assertEquals(TokenType.LET, secondLet.type());
+        Assertions.assertEquals(3, secondLet.position().line());
+        Assertions.assertEquals(1, secondLet.position().column());
+    }
+
 }

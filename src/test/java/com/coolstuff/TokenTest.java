@@ -196,4 +196,38 @@ public class TokenTest {
             }
         });
     }
+
+    @Test
+    public void testNextTokenHashComments(){
+        var input = """
+                let five = 5; # inline comment
+                # full line comment
+                let ten = 10;
+                #
+                ten;
+                """;
+        Lexer lexer = new Lexer(input);
+        Token[] expected = {
+                new Token(TokenType.LET, "let"),
+                new Token(TokenType.IDENT, "five"),
+                new Token(TokenType.ASSIGN, "="),
+                new Token(TokenType.INT, "5"),
+                new Token(TokenType.SEMICOLON, ";"),
+                new Token(TokenType.LET, "let"),
+                new Token(TokenType.IDENT, "ten"),
+                new Token(TokenType.ASSIGN, "="),
+                new Token(TokenType.INT, "10"),
+                new Token(TokenType.SEMICOLON, ";"),
+                new Token(TokenType.IDENT, "ten"),
+                new Token(TokenType.SEMICOLON, ";"),
+                new Token(TokenType.EOF, "eof"),
+        };
+        Assertions.assertDoesNotThrow(() -> {
+            for (Token t : expected) {
+                Token r = lexer.nextToken();
+                if (!r.equals(t)) throw new AssertionError(String.format("Expected (%s, %s) but got (%s, %s)\n", t.type(), t.token(), r.type(), r.token()));
+            }
+        });
+    }
+
 }

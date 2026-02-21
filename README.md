@@ -18,6 +18,7 @@ The base version of interpreter is done.
 - an array data structure  
 - a hash data structure  
 - structured runtime errors with source positions + call stack  
+- line comments with `#` (from `#` to end of line)  
 
 #### Progress:
 | Feature                | Status      | When       |
@@ -42,6 +43,17 @@ The base version of interpreter is done.
   - `:tokens [input]` tokenizes inline input or the next complete input
   - `:ast [input]` shows `Program.string()` for inline input or the next complete input
   - `:env` prints current environment bindings
+
+
+Monkey supports shell-style line comments:
+
+```monkey
+let x = 1; # inline comment
+# full-line comment
+let y = x + 1;
+```
+
+Everything after `#` until the end of the line is ignored by the lexer.
 
 #### CLI script mode
 
@@ -84,5 +96,4 @@ Run from the project root:
 
 #### To-Do:
 - Full Unicode support in syntax and strings
-- Comment syntax for source code
 - Stdlib module system / built-ins cleanup
