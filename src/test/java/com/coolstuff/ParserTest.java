@@ -139,6 +139,60 @@ public class ParserTest {
     }
 
     @Test
+    public void testEmptySemicolonParsesAsNoStatement() {
+        var parser = new Parser(new Lexer(";"));
+
+        var program = parser.parseProgram();
+
+        Assertions.assertEquals(0, program.statements().length);
+        Assertions.assertTrue(parser.getErrors().isEmpty());
+    }
+
+    @Test
+    public void testMultipleEmptySemicolonsParseAsNoStatements() {
+        var parser = new Parser(new Lexer(";;;"));
+
+        var program = parser.parseProgram();
+
+        Assertions.assertEquals(0, program.statements().length);
+        Assertions.assertTrue(parser.getErrors().isEmpty());
+    }
+
+    @Test
+    public void testSemicolonsAroundStatementsAreIgnored() {
+        var parser = new Parser(new Lexer("; let x = 5; ; x; ;"));
+
+        var program = parser.parseProgram();
+
+        Assertions.assertEquals(2, program.statements().length);
+        Assertions.assertTrue(parser.getErrors().isEmpty());
+
+        var letStatement = Assertions.assertInstanceOf(LetStatement.class, program.statements()[0]);
+        Assertions.assertEquals("x", letStatement.name().value());
+        testLiteralExpression(letStatement.value(), 5L);
+
+        var expressionStatement = Assertions.assertInstanceOf(ExpressionStatement.class, program.statements()[1]);
+        testIdentifier(expressionStatement.expression(), "x");
+    }
+
+    @Test
+    public void testEmptySemicolonsAreIgnoredInsideBlockStatements() {
+        var parser = new Parser(new Lexer("if (true) { ; ; 10; ; }"));
+
+        var program = parser.parseProgram();
+
+        Assertions.assertEquals(1, program.statements().length);
+        Assertions.assertTrue(parser.getErrors().isEmpty());
+
+        var topLevelExpression = Assertions.assertInstanceOf(ExpressionStatement.class, program.statements()[0]);
+        var ifExpression = Assertions.assertInstanceOf(IfExpression.class, topLevelExpression.expression());
+
+        Assertions.assertEquals(1, ifExpression.consequence().statements().length);
+        var blockStatement = Assertions.assertInstanceOf(ExpressionStatement.class, ifExpression.consequence().statements()[0]);
+        testIntegerLiteral(blockStatement.expression(), 10L);
+    }
+
+    @Test
     public void testIdentifierExpression() {
         var input = "foobar;";
 
