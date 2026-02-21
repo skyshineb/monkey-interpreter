@@ -96,7 +96,7 @@ public class CliRunnerTest {
         Assertions.assertEquals(2, exitCode);
         Assertions.assertEquals("", outBuffer.toString(StandardCharsets.UTF_8));
         Assertions.assertEquals(
-                "Usage: monkey [run <path> | --tokens <path> | --ast <path>]\n",
+                "Usage: monkey [run <path> | bench <path> | --tokens <path> | --ast <path>]\n",
                 errBuffer.toString(StandardCharsets.UTF_8)
         );
     }
@@ -115,7 +115,7 @@ public class CliRunnerTest {
         Assertions.assertEquals(2, exitCode);
         Assertions.assertEquals("", outBuffer.toString(StandardCharsets.UTF_8));
         Assertions.assertEquals(
-                "Usage: monkey [run <path> | --tokens <path> | --ast <path>]\n",
+                "Usage: monkey [run <path> | bench <path> | --tokens <path> | --ast <path>]\n",
                 errBuffer.toString(StandardCharsets.UTF_8)
         );
     }
@@ -134,7 +134,7 @@ public class CliRunnerTest {
         Assertions.assertEquals(2, exitCode);
         Assertions.assertEquals("", outBuffer.toString(StandardCharsets.UTF_8));
         Assertions.assertEquals(
-                "Usage: monkey [run <path> | --tokens <path> | --ast <path>]\n",
+                "Usage: monkey [run <path> | bench <path> | --tokens <path> | --ast <path>]\n",
                 errBuffer.toString(StandardCharsets.UTF_8)
         );
     }

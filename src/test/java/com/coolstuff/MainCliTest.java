@@ -39,6 +39,19 @@ public class MainCliTest {
         Assertions.assertEquals("", result.stderr());
     }
 
+
+    @Test
+    public void benchValidMonkeyFileSucceedsAndPrintsTiming() throws Exception {
+        var source = writeScript("valid.monkey", "1 + 2;\n");
+
+        var result = runCommand(new String[]{"bench", source.toString()}, "");
+
+        Assertions.assertEquals(0, result.exitCode());
+        Assertions.assertEquals("3\n", result.stdout());
+        Assertions.assertTrue(result.stderr().startsWith("Execution time: "));
+        Assertions.assertTrue(result.stderr().endsWith(" ms\n"));
+    }
+
     @Test
     public void tokensModePrintsDeterministicTokenStreamWithPositions() throws Exception {
         var source = writeScript("valid.monkey", "let x = 5;");
@@ -82,7 +95,7 @@ public class MainCliTest {
         Assertions.assertEquals(2, result.exitCode());
         Assertions.assertEquals("", result.stdout());
         Assertions.assertEquals(
-                "Usage: monkey [run <path> | --tokens <path> | --ast <path>]\n",
+                "Usage: monkey [run <path> | bench <path> | --tokens <path> | --ast <path>]\n",
                 result.stderr()
         );
     }
