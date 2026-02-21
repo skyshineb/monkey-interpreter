@@ -1,14 +1,10 @@
 package com.coolstuff.repl;
 
 import com.coolstuff.ast.Program;
+import com.coolstuff.cli.MonkeyPipeline;
 import com.coolstuff.evaluator.Environment;
 import com.coolstuff.evaluator.EvaluationException;
 import com.coolstuff.evaluator.Evaluator;
-import com.coolstuff.evaluator.object.MonkeyObject;
-import com.coolstuff.lexer.Lexer;
-import com.coolstuff.parser.Parser;
-import com.coolstuff.token.Token;
-import com.coolstuff.token.TokenType;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -45,6 +41,7 @@ public class REPL {
     private final Appendable out;
     private final Evaluator evaluator;
     private final InputAccumulator inputAccumulator;
+    private final MonkeyPipeline pipeline;
     private PendingInputAction pendingInputAction = PendingInputAction.EVALUATE;
 
     public REPL() {
@@ -58,6 +55,7 @@ public class REPL {
         this.out = out;
         this.evaluator = new Evaluator();
         this.inputAccumulator = new InputAccumulator();
+        this.pipeline = new MonkeyPipeline();
     }
 
 
@@ -68,6 +66,7 @@ public class REPL {
         this.out = out;
         this.evaluator = new Evaluator();
         this.inputAccumulator = new InputAccumulator();
+        this.pipeline = new MonkeyPipeline();
     }
 
     public void start() {
@@ -235,20 +234,20 @@ public class REPL {
     }
 
     private void evaluateInput(String input) {
-        Lexer l = new Lexer(input);
-        Parser p = new Parser(l);
-        Program program = p.parseProgram();
-        if (!p.getErrors().isEmpty()) {
-            printParseErrors(p.getErrors());
+        var result = pipeline.evaluate(input, evaluator);
+
+        if (result.hasParseErrors()) {
+            printParseErrors(result.parseErrors());
             return;
         }
-        try {
-            MonkeyObject<?> evaluated = evaluator.eval(program);
-            println(evaluated.inspect());
 
-        } catch (EvaluationException exc) {
+        if (result.hasEvaluationError()) {
+            EvaluationException exc = result.evaluationException();
             println(exc.getRuntimeError().formatMultiline());
+            return;
         }
+
+        println(result.value().inspect());
     }
 
     private void printHelp() {
@@ -263,24 +262,19 @@ public class REPL {
 
     private void printTokens(String input) {
         println("TOKENS:");
-        var lexer = new Lexer(input);
-        Token token;
-        do {
-            token = lexer.nextToken();
-            println("  %s('%s') @ %s".formatted(token.type(), token.token(), token.position()));
-        } while (token.type() != TokenType.EOF);
+        pipeline.tokenStream(input).forEach(line -> println("  " + line));
     }
 
     private void printAst(String input) {
-        var parser = new Parser(new Lexer(input));
-        var program = parser.parseProgram();
+        var parseResult = pipeline.parseProgram(input);
 
-        if (!parser.getErrors().isEmpty()) {
-            printParseErrors(parser.getErrors());
+        if (!parseResult.errors().isEmpty()) {
+            printParseErrors(parseResult.errors());
             return;
         }
 
         println("AST:");
+        Program program = parseResult.program();
         println(program.string());
     }
 
