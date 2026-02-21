@@ -71,7 +71,14 @@ public class CliRunnerTest {
         );
 
         Assertions.assertEquals(0, exitCode);
-        Assertions.assertEquals("let x = 5;\n", outBuffer.toString(StandardCharsets.UTF_8));
+        Assertions.assertEquals("""
+                Program
+                  LetStatement
+                    Name
+                      Identifier(x)
+                    Value
+                      IntegerLiteral(5)
+                """, outBuffer.toString(StandardCharsets.UTF_8));
         Assertions.assertEquals("", errBuffer.toString(StandardCharsets.UTF_8));
     }
 

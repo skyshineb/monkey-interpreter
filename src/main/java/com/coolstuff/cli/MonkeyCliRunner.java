@@ -1,5 +1,6 @@
 package com.coolstuff.cli;
 
+import com.coolstuff.ast.AstPrinter;
 import com.coolstuff.evaluator.Evaluator;
 
 import java.io.PrintStream;
@@ -92,7 +93,7 @@ public class MonkeyCliRunner {
             return CliResult.error(formatParseErrors(sourcePath, parseResult.errors()));
         }
 
-        return CliResult.success(parseResult.program().string() + System.lineSeparator());
+        return CliResult.success(AstPrinter.print(parseResult.program()));
     }
 
     private String formatParseErrors(Path sourcePath, java.util.List<String> parseErrors) {
