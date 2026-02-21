@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 
 public class CliRunner {
@@ -23,13 +24,20 @@ public class CliRunner {
         }
 
         var command = args[0];
-        var sourcePath = Path.of(args[1]);
+        if (!isSupportedCommand(command)) {
+            printUsage(err);
+            return 1;
+        }
+
+        var sourcePathString = args[1];
+        Path sourcePath;
         String input;
 
         try {
+            sourcePath = Path.of(sourcePathString);
             input = Files.readString(sourcePath, StandardCharsets.UTF_8);
-        } catch (IOException exc) {
-            err.println("Failed to read file: " + sourcePath + " (" + exc.getMessage() + ")");
+        } catch (InvalidPathException | IOException exc) {
+            err.println("Failed to read file: " + sourcePathString + " (" + exc.getMessage() + ")");
             return 1;
         }
 
@@ -37,10 +45,14 @@ public class CliRunner {
             case "run" -> runProgram(input, out, err);
             case "--tokens" -> printTokens(input, out);
             case "--ast" -> printAst(input, out, err);
-            default -> {
-                printUsage(err);
-                yield 1;
-            }
+            default -> throw new IllegalStateException("Unexpected command: " + command);
+        };
+    }
+
+    private boolean isSupportedCommand(String command) {
+        return switch (command) {
+            case "run", "--tokens", "--ast" -> true;
+            default -> false;
         };
     }
 

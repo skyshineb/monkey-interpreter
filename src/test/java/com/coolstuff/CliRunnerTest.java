@@ -93,4 +93,39 @@ public class CliRunnerTest {
                 errBuffer.toString(StandardCharsets.UTF_8)
         );
     }
+
+    @Test
+    public void invalidCommandPrintsUsageWithoutReadingFile() {
+        ByteArrayOutputStream outBuffer = new ByteArrayOutputStream();
+        ByteArrayOutputStream errBuffer = new ByteArrayOutputStream();
+
+        int exitCode = new CliRunner().run(
+                new String[]{"nope", "missing.monkey"},
+                new PrintStream(outBuffer, true, StandardCharsets.UTF_8),
+                new PrintStream(errBuffer, true, StandardCharsets.UTF_8)
+        );
+
+        Assertions.assertEquals(1, exitCode);
+        Assertions.assertEquals("", outBuffer.toString(StandardCharsets.UTF_8));
+        Assertions.assertEquals(
+                "Usage: monkey [run <path> | --tokens <path> | --ast <path>]\n",
+                errBuffer.toString(StandardCharsets.UTF_8)
+        );
+    }
+
+    @Test
+    public void invalidPathReturnsReadErrorInsteadOfCrashing() {
+        ByteArrayOutputStream outBuffer = new ByteArrayOutputStream();
+        ByteArrayOutputStream errBuffer = new ByteArrayOutputStream();
+
+        int exitCode = new CliRunner().run(
+                new String[]{"run", "\0"},
+                new PrintStream(outBuffer, true, StandardCharsets.UTF_8),
+                new PrintStream(errBuffer, true, StandardCharsets.UTF_8)
+        );
+
+        Assertions.assertEquals(1, exitCode);
+        Assertions.assertEquals("", outBuffer.toString(StandardCharsets.UTF_8));
+        Assertions.assertTrue(errBuffer.toString(StandardCharsets.UTF_8).startsWith("Failed to read file: "));
+    }
 }
