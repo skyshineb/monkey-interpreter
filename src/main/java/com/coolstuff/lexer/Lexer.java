@@ -42,7 +42,7 @@ public class Lexer {
 
     public Token nextToken() {
         Token tok;
-        skipWhitespaces();
+        skipIgnored();
         var tokenLine = currentLine;
         var tokenColumn = currentColumn;
 
@@ -137,8 +137,25 @@ public class Lexer {
         return tok;
     }
 
-    private void skipWhitespaces() {
-        while (Character.isWhitespace(ch)) {
+    private void skipIgnored() {
+        boolean skipping;
+        do {
+            skipping = false;
+
+            while (Character.isWhitespace(ch)) {
+                readChar();
+                skipping = true;
+            }
+
+            if (ch == '#') {
+                skipComment();
+                skipping = true;
+            }
+        } while (skipping);
+    }
+
+    private void skipComment() {
+        while (ch != '\n' && ch != 0) {
             readChar();
         }
     }

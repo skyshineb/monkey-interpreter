@@ -139,6 +139,21 @@ public class ParserTest {
     }
 
     @Test
+    public void testCommentsAreIgnoredByParser() {
+        var input = """
+                let x = 10; # keep x
+                # entire line ignored
+                return x;
+                """;
+
+        var program = buildProgram(input);
+
+        Assertions.assertEquals(2, program.statements().length);
+        Assertions.assertInstanceOf(LetStatement.class, program.statements()[0]);
+        Assertions.assertInstanceOf(ReturnStatement.class, program.statements()[1]);
+    }
+
+    @Test
     public void testEmptySemicolonParsesAsNoStatement() {
         var parser = new Parser(new Lexer(";"));
 

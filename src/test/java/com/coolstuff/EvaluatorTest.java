@@ -93,6 +93,19 @@ public class EvaluatorTest {
     }
 
     @Test
+    public void testCommentsAreIgnoredByEvaluator() throws EvaluationException {
+        var input = """
+                let x = 40; # base
+                # this line should be ignored
+                let y = 2;
+                x + y;
+                """;
+
+        var evaluated = testEval(input);
+        testIntegerObject(evaluated, 42L);
+    }
+
+    @Test
     public void testShortCircuitBooleanExpressions() throws EvaluationException {
         var tests = List.of(
                 new EvalBooleanTestCase("false && (1 / 0 > 0)", false),
