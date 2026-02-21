@@ -35,21 +35,28 @@ public class MonkeyCliRunnerTest {
     }
 
     @Test
-    public void astModeReturnsParseErrors() throws Exception {
+    public void astModeReturnsFormattedParseErrors() throws Exception {
         Path source = tempDir.resolve("bad.monkey");
         Files.writeString(source, "let x = ;", StandardCharsets.UTF_8);
 
-        var outBuffer = new ByteArrayOutputStream();
-        var errBuffer = new ByteArrayOutputStream();
+        var result = new MonkeyCliRunner().execute(new String[]{"--ast", source.toString()});
 
-        var exitCode = new MonkeyCliRunner().run(
-                new String[]{"--ast", source.toString()},
-                new PrintStream(outBuffer, true, StandardCharsets.UTF_8),
-                new PrintStream(errBuffer, true, StandardCharsets.UTF_8)
-        );
+        Assertions.assertEquals(1, result.exitCode());
+        Assertions.assertEquals("", result.stdoutText());
+        Assertions.assertTrue(result.stderrText().startsWith("Parse errors in " + source));
+        Assertions.assertTrue(result.stderrText().contains("- no prefix parse function"));
+    }
 
-        Assertions.assertEquals(1, exitCode);
-        Assertions.assertEquals("", outBuffer.toString(StandardCharsets.UTF_8));
-        Assertions.assertTrue(errBuffer.toString(StandardCharsets.UTF_8).contains("no prefix parse function"));
+    @Test
+    public void runModeReturnsFormattedRuntimeErrors() throws Exception {
+        Path source = tempDir.resolve("runtime.monkey");
+        Files.writeString(source, "unknown;", StandardCharsets.UTF_8);
+
+        var result = new MonkeyCliRunner().execute(new String[]{"run", source.toString()});
+
+        Assertions.assertEquals(1, result.exitCode());
+        Assertions.assertEquals("", result.stdoutText());
+        Assertions.assertTrue(result.stderrText().startsWith("Runtime error in " + source));
+        Assertions.assertTrue(result.stderrText().contains("Identifier not found"));
     }
 }

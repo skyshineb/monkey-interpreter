@@ -2,12 +2,10 @@ package com.coolstuff.cli;
 
 import com.coolstuff.evaluator.Evaluator;
 
-import java.io.IOException;
 import java.io.PrintStream;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
+import java.util.stream.Collectors;
 
 public class MonkeyCliRunner {
     private static final String USAGE = "Usage: monkey [run <path> | --tokens <path> | --ast <path>]";
@@ -23,69 +21,100 @@ public class MonkeyCliRunner {
     }
 
     public int run(String[] args, PrintStream out, PrintStream err) {
+        var result = execute(args);
+        out.print(result.stdoutText());
+        err.print(result.stderrText());
+        return result.exitCode();
+    }
+
+    CliResult execute(String[] args) {
         if (args.length != 2) {
-            printUsage(err);
-            return 1;
+            return CliResult.error(usageText());
         }
 
         var mode = Mode.fromCommand(args[0]);
         if (mode == null) {
-            printUsage(err);
-            return 1;
+            return CliResult.error(usageText());
         }
 
-        var sourcePathString = args[1];
+        Path sourcePath;
         String input;
         try {
-            var sourcePath = Path.of(sourcePathString);
-            input = Files.readString(sourcePath, StandardCharsets.UTF_8);
-        } catch (InvalidPathException | IOException exc) {
-            err.println("Failed to read file: " + sourcePathString + " (" + exc.getMessage() + ")");
-            return 1;
+            sourcePath = Path.of(args[1]);
+        } catch (InvalidPathException exc) {
+            return CliResult.error("Invalid path: %s%n".formatted(args[1]));
+        }
+
+        try {
+            input = ScriptSourceLoader.load(sourcePath);
+        } catch (ScriptSourceLoader.ScriptLoadException exc) {
+            return CliResult.error(exc.toCliMessage() + System.lineSeparator());
         }
 
         return switch (mode) {
-            case RUN -> runProgram(input, out, err);
-            case TOKENS -> printTokens(input, out);
-            case AST -> printAst(input, out, err);
+            case RUN -> runProgram(sourcePath, input);
+            case TOKENS -> printTokens(input);
+            case AST -> printAst(sourcePath, input);
         };
     }
 
     public static void printUsage(PrintStream err) {
-        err.println(USAGE);
+        err.print(usageText());
     }
 
-    private int runProgram(String input, PrintStream out, PrintStream err) {
+    private static String usageText() {
+        return USAGE + System.lineSeparator();
+    }
+
+    private CliResult runProgram(Path sourcePath, String input) {
         var result = pipeline.evaluate(input, new Evaluator());
 
         if (result.hasParseErrors()) {
-            result.parseErrors().forEach(err::println);
-            return 1;
+            return CliResult.error(formatParseErrors(sourcePath, result.parseErrors()));
         }
 
         if (result.hasEvaluationError()) {
-            err.println(result.evaluationException().getRuntimeError().formatMultiline());
-            return 1;
+            return CliResult.error(formatRuntimeError(sourcePath, result.evaluationException()));
         }
 
-        out.println(result.value().inspect());
-        return 0;
+        return CliResult.success(result.value().inspect() + System.lineSeparator());
     }
 
-    private int printTokens(String input, PrintStream out) {
-        pipeline.tokenStream(input).forEach(out::println);
-        return 0;
+    private CliResult printTokens(String input) {
+        var output = pipeline.tokenStream(input).stream()
+                .collect(Collectors.joining(System.lineSeparator(), "", System.lineSeparator()));
+        return CliResult.success(output);
     }
 
-    private int printAst(String input, PrintStream out, PrintStream err) {
+    private CliResult printAst(Path sourcePath, String input) {
         var parseResult = pipeline.parseProgram(input);
         if (!parseResult.errors().isEmpty()) {
-            parseResult.errors().forEach(err::println);
-            return 1;
+            return CliResult.error(formatParseErrors(sourcePath, parseResult.errors()));
         }
 
-        out.println(parseResult.program().string());
-        return 0;
+        return CliResult.success(parseResult.program().string() + System.lineSeparator());
+    }
+
+    private String formatParseErrors(Path sourcePath, java.util.List<String> parseErrors) {
+        var details = parseErrors.stream()
+                .map(error -> "- " + error)
+                .collect(Collectors.joining(System.lineSeparator()));
+
+        return "Parse errors in %s:%n%s%n".formatted(sourcePath, details);
+    }
+
+    private String formatRuntimeError(Path sourcePath, com.coolstuff.evaluator.EvaluationException exc) {
+        return "Runtime error in %s:%n%s%n".formatted(sourcePath, exc.getRuntimeError().formatMultiline());
+    }
+
+    record CliResult(int exitCode, String stdoutText, String stderrText) {
+        static CliResult success(String stdoutText) {
+            return new CliResult(0, stdoutText, "");
+        }
+
+        static CliResult error(String stderrText) {
+            return new CliResult(1, "", stderrText);
+        }
     }
 
     enum Mode {
