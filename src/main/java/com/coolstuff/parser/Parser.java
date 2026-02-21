@@ -54,6 +54,9 @@ public class Parser {
 
     private Statement parseStatement() {
         switch (curToken.type()) {
+            case SEMICOLON -> {
+                return null;
+            }
             case LET -> {
                 return parseLetStatement();
             }
