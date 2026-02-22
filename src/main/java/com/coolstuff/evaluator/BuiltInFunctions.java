@@ -58,8 +58,9 @@ public enum BuiltInFunctions {
 
     PUTS("puts", (callToken, arguments, evaluator) -> {
         for (var arg : arguments) {
-            System.out.println(arg.inspect());
+            System.out.print(arg.inspect());
         }
+        System.out.println();
         return MonkeyNull.INSTANCE;
     });
 
