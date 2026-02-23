@@ -73,9 +73,10 @@ public class Evaluator {
         Map<HashKey, MonkeyObject<?>> map = new HashMap<>();
         for (var pair : literal.pairs()) {
             var key = eval(pair.key());
+            var hashKey = MonkeyHashable.checkIsHashable(key, literal.token(), this).hashKey();
             var value = eval(pair.value());
 
-            map.put(new HashKey(key), value);
+            map.put(hashKey, value);
         }
         return new MonkeyHash(map);
     }
