@@ -93,8 +93,8 @@ public class Evaluator {
             }
             case MonkeyHash hash -> {
                 var key = eval(node.index());
-                MonkeyHashable.checkIsHashable(key, node.token(), this);
-                var res = hash.getObject().get(key);
+                var hashKey = MonkeyHashable.checkIsHashable(key, node.token(), this).hashKey();
+                var res = hash.getObject().get(hashKey);
                 if (res == null) {
                     yield MonkeyNull.INSTANCE;
                 }
