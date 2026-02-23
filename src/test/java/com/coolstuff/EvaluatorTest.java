@@ -497,7 +497,10 @@ public class EvaluatorTest {
                 new HashIndexExpressionTestCase("{}[\"foo\"]", null),
                 new HashIndexExpressionTestCase("{5: 5}[5]", 5L),
                 new HashIndexExpressionTestCase("{true: 5}[true]", 5L),
-                new HashIndexExpressionTestCase("{false: 5}[false]", 5L)
+                new HashIndexExpressionTestCase("{false: 5}[false]", 5L),
+                new HashIndexExpressionTestCase("{\"x\": [1, 2, 3]}[\"x\"][1]", 2L),
+                new HashIndexExpressionTestCase("let arr = [1, 2, 3]; let h = {\"first\": first(arr), \"len\": len(arr)}; h[\"first\"] + h[\"len\"]", 4L),
+                new HashIndexExpressionTestCase("let h = {\"a\": 1, \"c\": 3, \"e\": 5}; h[\"a\"] + h[\"c\"] + h[\"e\"]", 9L)
         );
 
         for (var test : tests) {
